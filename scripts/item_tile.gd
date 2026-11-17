@@ -148,6 +148,8 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_DRAG_END:
 		modulate = Color.WHITE
+		# Cells live inside the board's scroll content, so reach the Board
+		# through the cell's board reference, not the node hierarchy.
 		var cell := get_parent()
-		if cell and cell.get_parent() and cell.get_parent().has_method("clear_highlights"):
-			cell.get_parent().clear_highlights()
+		if cell is BoardCell and (cell as BoardCell).board != null:
+			((cell as BoardCell).board as Board).clear_highlights()

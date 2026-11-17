@@ -1,14 +1,20 @@
 extends Control
-## Merge Code — main gameplay scene (visual redesign).
+## Merge Code - main gameplay scene.
 ##
-## Board-first layout, all containers/anchors (no fixed three-column widths):
-##   HUD (coins / level / sound / menu)
-##   Customer strip (horizontal, portraits + wanted item icons)
-##   Board (dominant, workbench surface) + generator dock
-##   Bottom navigation (Crafting / Shop / Catalog / Missions / Help)
-## Layout adapts to viewport: wide screens get a vertical generator dock
-## beside the board; narrow/portrait screens get a horizontal generator
-## dock under the board and the board cell size is recomputed on resize.
+## Board-first game-screen composition (not a stack of dashboard panels):
+##   TopHUD            compact reserved strip (coins / level / menu)
+##   CustomerCarousel  slim horizontal strip of compact customer cards
+##   GameplayArea      the merge board on its workbench surface, inside
+##                     its own clipped scrolling viewport (Board), with
+##                     the generator dock beside it on wide screens
+##   GeneratorDock     under the board as a horizontal carousel on
+##                     narrow/portrait screens
+##   SelectedItemOverlay  floating panel over the board, only visible
+##                     while an item is selected (Board owns selection)
+##   BottomNavigation  icon-first compact navigation
+##   ModalLayer        dim + popup + toast
+## The board receives the largest continuous area at every resolution;
+## every other component has a small, bounded height/width.
 
 const COIN_ICON := "res://assets/sprites/game_icons/lorc_crown-coin.svg"
 const STAR_ICON := "res://assets/sprites/game_icons/lorc_flat-star.svg"
@@ -25,16 +31,22 @@ var _gen_cards: Dictionary = {}
 var _gen_grid: GridContainer
 var _gen_panel: PanelContainer
 var _gen_scroll: ScrollContainer
+var _gen_header: HBoxContainer
 var _order_cards: Array = []
+var _order_scroll: ScrollContainer
+var _orders_panel: PanelContainer
+var _order_row: GridContainer
+var _mode: int = -1  # 0 narrow, 1 wide, 2 wide+short (landscape phone)
+var _root_box: VBoxContainer
 var _middle: HBoxContainer
-var _board_col: VBoxContainer
-var _wide_mode: bool = true
-var _layout_applied: bool = false
+var _board_panel: PanelContainer
 var _hud_title: Label
 var _sound_btn: Button
 var _menu_btn: Button
-var _orders_hint: Label
 var _board_hint: Label
+var _gen_hint: Label
+var _nav_buttons: Array = []
+var _sel_overlay: PanelContainer
 var _selected_icon: PanelContainer
 var _selected_title: Label
 var _selected_desc: Label
@@ -76,29 +88,24 @@ func _build_ui() -> void:
 	add_child(bg)
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_bottom", 6)
 	add_child(margin)
-	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 8)
-	margin.add_child(root)
-	_build_hud(root)
-	_build_orders_strip(root)
+	_root_box = VBoxContainer.new()
+	_root_box.add_theme_constant_override("separation", 6)
+	margin.add_child(_root_box)
+	_build_hud(_root_box)
+	_build_orders_strip(_root_box)
 	_middle = HBoxContainer.new()
 	_middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_middle.add_theme_constant_override("separation", 8)
-	root.add_child(_middle)
-	_board_col = VBoxContainer.new()
-	_board_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_board_col.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_board_col.add_theme_constant_override("separation", 8)
-	_middle.add_child(_board_col)
-	_build_board_area(_board_col)
+	_middle.add_theme_constant_override("separation", 6)
+	_root_box.add_child(_middle)
+	_build_board_area(_middle)
 	_build_generator_dock()
 	_middle.add_child(_gen_panel)
-	_build_bottom_nav(root)
+	_build_bottom_nav(_root_box)
 	_build_overlay()
 	var autosave := Timer.new()
 	autosave.wait_time = 10.0
@@ -106,76 +113,80 @@ func _build_ui() -> void:
 	autosave.timeout.connect(_on_autosave_timeout)
 	add_child(autosave)
 
-func _panel() -> PanelContainer:
+func _panel(content_margin: float = 8.0) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", UiStyle.Kenney_panel_style("grey"))
+	p.add_theme_stylebox_override("panel", UiStyle.Kenney_texture_style("grey_panel.png", 18.0, content_margin))
 	return p
 
 func _build_hud(root: VBoxContainer) -> void:
 	var panel := _panel()
 	root.add_child(panel)
 	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 10)
+	bar.add_theme_constant_override("separation", 8)
 	panel.add_child(bar)
-	_hud_title = UiStyle.label("Merge Code", 20, UiStyle.ACCENT)
+	_hud_title = UiStyle.label("Merge Code", 17, UiStyle.ACCENT)
 	bar.add_child(_hud_title)
 	var coin_chip := PanelContainer.new()
-	coin_chip.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex("FFF1DE"), 12))
+	coin_chip.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex("FFF1DE"), 11))
 	var coin_row := HBoxContainer.new()
-	coin_row.add_theme_constant_override("separation", 5)
+	coin_row.add_theme_constant_override("separation", 4)
 	coin_chip.add_child(coin_row)
-	coin_row.add_child(UiStyle.icon_rect(COIN_ICON, Vector2(20, 20), UiStyle.hex("E8A33D")))
-	_coins_label = UiStyle.label("0", 17, UiStyle.INK)
+	coin_row.add_child(UiStyle.icon_rect(COIN_ICON, Vector2(18, 18), UiStyle.hex("E8A33D")))
+	_coins_label = UiStyle.label("0", 16, UiStyle.INK)
 	coin_row.add_child(_coins_label)
 	bar.add_child(coin_chip)
 	var level_chip := PanelContainer.new()
-	level_chip.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex("EAF3FF"), 12))
+	level_chip.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex("EAF3FF"), 11))
 	var level_row := HBoxContainer.new()
-	level_row.add_theme_constant_override("separation", 5)
+	level_row.add_theme_constant_override("separation", 4)
 	level_chip.add_child(level_row)
-	level_row.add_child(UiStyle.icon_rect(STAR_ICON, Vector2(18, 18), UiStyle.hex("E8A33D")))
-	_level_label = UiStyle.label("Lv 1", 15, UiStyle.INK)
+	level_row.add_child(UiStyle.icon_rect(STAR_ICON, Vector2(16, 16), UiStyle.hex("E8A33D")))
+	_level_label = UiStyle.label("Lv 1", 14, UiStyle.INK)
 	level_row.add_child(_level_label)
 	_xp_bar = ProgressBar.new()
-	_xp_bar.custom_minimum_size = Vector2(110, 15)
+	_xp_bar.custom_minimum_size = Vector2(90, 13)
+	_xp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	UiStyle.style_Kenney_progress(_xp_bar, "blue")
 	level_row.add_child(_xp_bar)
 	bar.add_child(level_chip)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer)
-	_sound_btn = UiStyle.make_Kenney_icon_button(GEAR_ICON, "Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off", "grey", 12, true)
+	_sound_btn = UiStyle.make_Kenney_icon_button(GEAR_ICON, "Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off", "grey", 11, true)
+	_sound_btn.custom_minimum_size = Vector2(0, 36)
+	_sound_btn.tooltip_text = "Toggle sound"
 	_sound_btn.pressed.connect(func() -> void:
 		GameStateStore.instance.sound_enabled = not GameStateStore.instance.sound_enabled
 		_sound_btn.text = "Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off"
+		_apply_layout()
 		_mark_dirty())
 	bar.add_child(_sound_btn)
-	_menu_btn = UiStyle.make_Kenney_button("Main Menu", "grey", 12, true)
+	_menu_btn = UiStyle.make_Kenney_button("Main Menu", "grey", 11, true)
+	_menu_btn.custom_minimum_size = Vector2(0, 36)
 	_menu_btn.pressed.connect(func() -> void: _save(); get_tree().change_scene_to_file("res://scenes/main_menu.tscn"))
 	bar.add_child(_menu_btn)
 
 func _build_orders_strip(root: VBoxContainer) -> void:
-	var panel := _panel()
-	root.add_child(panel)
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
-	panel.add_child(vbox)
-	var head := HBoxContainer.new()
-	vbox.add_child(head)
-	head.add_child(UiStyle.label("Customers", 15, UiStyle.INK))
-	_orders_hint = UiStyle.label("— drag items onto a customer, or press Deliver", 11, UiStyle.MUTED)
-	head.add_child(_orders_hint)
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 132)
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	vbox.add_child(scroll)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	scroll.add_child(row)
+	# No header row: the cards themselves (portrait + wants + reward)
+	# explain the strip, and the saved pixels go to the board. The panel
+	# is reparented by _apply_layout: top strip normally, left rail on
+	# short wide screens.
+	_orders_panel = _panel()
+	root.add_child(_orders_panel)
+	_order_scroll = ScrollContainer.new()
+	_order_scroll.custom_minimum_size = Vector2(0, 64)
+	_order_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_order_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_order_scroll.tooltip_text = "Drag wanted items onto a customer, or press Deliver when ready"
+	_orders_panel.add_child(_order_scroll)
+	_order_row = GridContainer.new()
+	_order_row.columns = GameStateStore.instance.MAX_ORDERS
+	_order_row.add_theme_constant_override("h_separation", 6)
+	_order_row.add_theme_constant_override("v_separation", 6)
+	_order_scroll.add_child(_order_row)
 	for i in GameStateStore.instance.MAX_ORDERS:
 		var card := OrderCard.new()
-		row.add_child(card)
+		_order_row.add_child(card)
 		card.setup(i)
 		card.deliver_requested.connect(_on_deliver)
 		card.dismiss_requested.connect(func(index: int) -> void:
@@ -186,80 +197,110 @@ func _build_orders_strip(root: VBoxContainer) -> void:
 		card.item_dropped.connect(_on_order_item_drop)
 		_order_cards.append(card)
 
-func _build_board_area(parent: VBoxContainer) -> void:
-	var panel := _panel()
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parent.add_child(panel)
+func _build_board_area(parent: HBoxContainer) -> void:
+	_board_panel = _panel()
+	_board_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_board_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(_board_panel)
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 6)
-	panel.add_child(vbox)
+	vbox.add_theme_constant_override("separation", 4)
+	_board_panel.add_child(vbox)
 	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 8)
+	header.add_theme_constant_override("separation", 6)
 	vbox.add_child(header)
-	header.add_child(UiStyle.label("Merge Board", 16, UiStyle.INK))
-	_board_hint = UiStyle.label("Drag matching items together", 11, UiStyle.MUTED)
+	header.add_child(UiStyle.label("Merge Board", 13, UiStyle.INK))
+	_board_hint = UiStyle.label("Drag matching items together", 10, UiStyle.MUTED)
 	header.add_child(_board_hint)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
-	_expand_btn = UiStyle.make_Kenney_icon_button(COIN_ICON, "Expand", "yellow", 12, true)
+	_expand_btn = UiStyle.make_Kenney_icon_button(COIN_ICON, "Expand", "yellow", 11, true)
+	_expand_btn.custom_minimum_size = Vector2(0, 30)
 	_expand_btn.pressed.connect(_on_expand_board)
 	header.add_child(_expand_btn)
-	# Workbench surface with the grid centred on it.
-	var surface := PanelContainer.new()
-	surface.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	surface.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# GameplayArea: workbench surface + board viewport + selection overlay.
+	var area := Control.new()
+	area.name = "GameplayArea"
+	area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	area.clip_contents = true
+	vbox.add_child(area)
+	var surface := Panel.new()
+	surface.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var surf_style := StyleBoxTexture.new()
 	surf_style.texture = UiStyle.load_tex("res://assets/backgrounds/board_surface.svg")
 	surf_style.texture_margin_left = 32.0
 	surf_style.texture_margin_right = 32.0
 	surf_style.texture_margin_top = 32.0
 	surf_style.texture_margin_bottom = 32.0
-	surf_style.set_content_margin_all(18)
+	surf_style.set_content_margin_all(10)
 	surface.add_theme_stylebox_override("panel", surf_style)
-	vbox.add_child(surface)
+	area.add_child(surface)
+	# Board is a clipped ScrollContainer viewport: it fills the surface,
+	# centres the grid, and scrolls vertically rather than overflowing.
 	board = Board.new()
-	board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	surface.add_child(board)
-	# Selected item bar (icon-first, compact).
-	var selected_panel := PanelContainer.new()
-	selected_panel.add_theme_stylebox_override("panel", UiStyle.Kenney_panel_style("grey", Color(1.0, 0.94, 0.80, 1.0)))
-	vbox.add_child(selected_panel)
+	board.set_anchors_preset(Control.PRESET_FULL_RECT)
+	board.offset_left = 6
+	board.offset_top = 6
+	board.offset_right = -6
+	board.offset_bottom = -6
+	area.add_child(board)
+	_build_selected_overlay(area)
+
+func _build_selected_overlay(area: Control) -> void:
+	# Contextual: floats over the bottom of the board ONLY while an item
+	# is selected. No selection = no reserved space, board keeps it all.
+	_sel_overlay = PanelContainer.new()
+	_sel_overlay.add_theme_stylebox_override("panel", UiStyle.Kenney_panel_style("grey", Color(1.0, 0.94, 0.80, 1.0)))
+	_sel_overlay.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_sel_overlay.offset_left = -176
+	_sel_overlay.offset_right = 176
+	_sel_overlay.offset_top = -72
+	_sel_overlay.offset_bottom = -8
+	_sel_overlay.visible = false
+	area.add_child(_sel_overlay)
 	var sel_row := HBoxContainer.new()
-	sel_row.add_theme_constant_override("separation", 8)
-	selected_panel.add_child(sel_row)
+	sel_row.add_theme_constant_override("separation", 6)
+	_sel_overlay.add_child(sel_row)
 	_selected_icon = PanelContainer.new()
-	_selected_icon.custom_minimum_size = Vector2(44, 44)
-	_selected_icon.add_theme_stylebox_override("panel", UiStyle.panel_style(Color(0, 0, 0, 0.06), 10))
+	_selected_icon.custom_minimum_size = Vector2(40, 40)
+	_selected_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_selected_icon.add_theme_stylebox_override("panel", UiStyle.panel_style(Color(0, 0, 0, 0.06), 9))
 	sel_row.add_child(_selected_icon)
 	var sel_text := VBoxContainer.new()
 	sel_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sel_text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	sel_row.add_child(sel_text)
-	_selected_title = UiStyle.label("No item selected", 14, UiStyle.INK)
+	_selected_title = UiStyle.label("No item selected", 12, UiStyle.INK)
+	_selected_title.clip_text = true
 	sel_text.add_child(_selected_title)
-	_selected_desc = UiStyle.label("Tap a board item to see it here. Drag items to move, swap or merge.", 11, UiStyle.MUTED)
+	_selected_desc = UiStyle.label("", 10, UiStyle.MUTED)
 	_selected_desc.clip_text = true
 	sel_text.add_child(_selected_desc)
-	_sell_btn = UiStyle.make_Kenney_icon_button(COIN_ICON, "Sell", "red", 13)
+	_sell_btn = UiStyle.make_Kenney_icon_button(COIN_ICON, "Sell", "red", 12)
+	_sell_btn.custom_minimum_size = Vector2(0, 34)
+	_sell_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_sell_btn.disabled = true
 	_sell_btn.pressed.connect(_on_sell_selected)
 	sel_row.add_child(_sell_btn)
-	var close_btn := UiStyle.make_Kenney_icon_button(CLOSE_ICON, "", "red", 12)
-	close_btn.custom_minimum_size = Vector2(42, 42)
+	var close_btn := UiStyle.make_Kenney_icon_button(CLOSE_ICON, "", "red", 11)
+	close_btn.custom_minimum_size = Vector2(36, 34)
+	close_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	close_btn.tooltip_text = "Dismiss"
 	close_btn.pressed.connect(_clear_selection)
 	sel_row.add_child(close_btn)
 
 func _build_generator_dock() -> void:
 	_gen_panel = _panel()
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 6)
+	vbox.add_theme_constant_override("separation", 4)
 	_gen_panel.add_child(vbox)
-	var head := HBoxContainer.new()
-	vbox.add_child(head)
-	head.add_child(UiStyle.label("Generators", 15, UiStyle.INK))
-	head.add_child(UiStyle.label("tap Make to produce", 11, UiStyle.MUTED))
+	_gen_header = HBoxContainer.new()
+	_gen_header.add_theme_constant_override("separation", 6)
+	vbox.add_child(_gen_header)
+	_gen_header.add_child(UiStyle.label("Generators", 13, UiStyle.INK))
+	_gen_hint = UiStyle.label("tap Make", 10, UiStyle.MUTED)
+	_gen_header.add_child(_gen_hint)
 	_gen_scroll = ScrollContainer.new()
 	_gen_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_gen_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -268,8 +309,8 @@ func _build_generator_dock() -> void:
 	_gen_grid.columns = 1
 	_gen_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_gen_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_gen_grid.add_theme_constant_override("h_separation", 8)
-	_gen_grid.add_theme_constant_override("v_separation", 8)
+	_gen_grid.add_theme_constant_override("h_separation", 6)
+	_gen_grid.add_theme_constant_override("v_separation", 6)
 	_gen_scroll.add_child(_gen_grid)
 	for gen_id in ItemDatabase.instance.generator_order:
 		var card := GeneratorCard.new()
@@ -280,10 +321,10 @@ func _build_generator_dock() -> void:
 		_gen_cards[str(gen_id)] = card
 
 func _build_bottom_nav(root: VBoxContainer) -> void:
-	var panel := _panel()
+	var panel := _panel(6.0)
 	root.add_child(panel)
 	var nav := HBoxContainer.new()
-	nav.add_theme_constant_override("separation", 8)
+	nav.add_theme_constant_override("separation", 6)
 	panel.add_child(nav)
 	var entries := [
 		["Crafting", "res://assets/sprites/game_icons/lorc_claw-hammer.svg", "craft", "blue", false],
@@ -293,10 +334,13 @@ func _build_bottom_nav(root: VBoxContainer) -> void:
 		["Help", "res://assets/sprites/game_icons/delapouite_present.svg", "help", "grey", true],
 	]
 	for entry in entries:
-		var b := UiStyle.make_Kenney_icon_button(str(entry[1]), str(entry[0]), str(entry[3]), 14, bool(entry[4]))
+		var b := UiStyle.make_Kenney_icon_button(str(entry[1]), str(entry[0]), str(entry[3]), 13, bool(entry[4]))
+		b.custom_minimum_size = Vector2(0, 40)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = str(entry[0])
 		b.pressed.connect(_open_popup.bind(str(entry[2])))
 		nav.add_child(b)
+		_nav_buttons.append({"button": b, "name": str(entry[0])})
 
 func _build_overlay() -> void:
 	_dim = ColorRect.new()
@@ -308,8 +352,13 @@ func _build_overlay() -> void:
 	popup.board = board
 	popup.changed.connect(func() -> void: _mark_dirty(); _refresh_all())
 	add_child(popup)
-	_toast = UiStyle.label("", 15, Color.WHITE)
+	_toast = UiStyle.label("", 14, Color.WHITE)
+	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_toast.offset_left = -280
+	_toast.offset_right = 280
+	_toast.offset_top = -118
+	_toast.offset_bottom = -66
 	_toast.add_theme_stylebox_override("normal", UiStyle.panel_style(UiStyle.INK, 10))
 	_toast.visible = false
 	add_child(_toast)
@@ -320,50 +369,100 @@ func _apply_layout() -> void:
 	if not is_inside_tree() or board == null:
 		return
 	var vp := get_viewport_rect().size
-	# Landscape/desktop: generator dock beside the board. Portrait/compact:
-	# dock underneath as a horizontal strip. The board itself measures its
-	# container (Board._relayout) - no reserved-size guessing here.
+	# Three compositions, chosen from the real viewport:
+	#  0 narrow/portrait: customers top strip, board centre, generator
+	#    carousel under the board, icon-first bottom navigation.
+	#  1 wide: customers top strip, board centre, generator dock right.
+	#  2 wide + short (landscape phones): customers as a LEFT rail and
+	#    generators right, so the board keeps usable height instead of
+	#    being crushed between two horizontal strips.
 	var wide := (vp.x >= 900.0 and vp.x >= vp.y * 0.85) or (vp.x >= 740.0 and vp.x >= vp.y * 1.6)
-	if not _layout_applied or wide != _wide_mode:
-		_layout_applied = true
-		_wide_mode = wide
-		if wide:
-			if _gen_panel.get_parent() != _middle:
-				_gen_panel.reparent(_middle)
-			_gen_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-			_gen_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-			_gen_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-		else:
-			if _gen_panel.get_parent() != _board_col:
-				_gen_panel.reparent(_board_col)
-			_gen_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			_gen_grid.columns = maxi(1, ItemDatabase.instance.generator_order.size())
-			_gen_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-			_gen_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		_gen_scroll.custom_minimum_size = Vector2.ZERO
+	var mode := 0
 	if wide:
-		var dock_width := 336.0 if vp.x >= 1220.0 else 184.0
-		_gen_panel.custom_minimum_size = Vector2(dock_width, 0)
-		_gen_grid.columns = 2 if vp.x >= 1220.0 else 1
+		mode = 2 if vp.y < 520.0 else 1
+	if mode != _mode:
+		_mode = mode
+		_apply_mode(mode)
+	if mode == 2:
+		_orders_panel.custom_minimum_size = Vector2(228, 0)
+		_gen_panel.custom_minimum_size = Vector2(164, 0)
+		_gen_grid.columns = 1
+	elif mode == 1:
+		_gen_panel.custom_minimum_size = Vector2(296, 0) if vp.x >= 1440.0 else Vector2(164, 0)
+		_gen_grid.columns = 2 if vp.x >= 1440.0 else 1
 	else:
+		_orders_panel.custom_minimum_size = Vector2.ZERO
 		_gen_panel.custom_minimum_size = Vector2.ZERO
 	for card in _gen_cards.values():
-		(card as GeneratorCard).set_dock_compact(not wide)
+		(card as GeneratorCard).set_dock_compact(mode == 0)
+	var compact_orders := vp.x < 760.0 or vp.y < 700.0
 	for card in _order_cards:
-		(card as OrderCard).set_compact(vp.x < 760.0 or vp.y < 760.0)
-	# Compact HUD: preserve coin/level controls, drop secondary labels first.
+		(card as OrderCard).set_compact(compact_orders)
+	# HUD: hide title first, then shorten buttons; chips always stay.
 	var compact := vp.x < 680.0
 	if _hud_title:
 		_hud_title.visible = not compact
-	if _orders_hint:
-		_orders_hint.visible = vp.x >= 760.0
 	if _board_hint:
 		_board_hint.visible = vp.x >= 760.0
+	if _gen_hint:
+		_gen_hint.visible = vp.x >= 900.0
 	if _sound_btn:
-		_sound_btn.text = "Sound" if compact else ("Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off")
+		_sound_btn.text = "" if compact else ("Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off")
 	if _menu_btn:
 		_menu_btn.text = "Menu" if compact else "Main Menu"
-	_xp_bar.custom_minimum_size = Vector2(58, 15) if compact else Vector2(110, 15)
+	_xp_bar.custom_minimum_size = Vector2(52, 13) if compact else Vector2(90, 13)
+	# Bottom navigation: icon-first on narrow screens, labels return on
+	# wide ones. Buttons keep >=40px touch targets either way.
+	var icon_only := vp.x < 640.0
+	for entry in _nav_buttons:
+		var b: Button = entry["button"]
+		b.text = "" if icon_only else str(entry["name"])
+
+func _apply_mode(mode: int) -> void:
+	# Generator dock placement + scroll direction per mode.
+	if mode == 0:
+		if _gen_panel.get_parent() != _root_box:
+			_gen_panel.reparent(_root_box)
+		_root_box.move_child(_gen_panel, _middle.get_index() + 1)
+		_gen_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		_gen_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_gen_grid.columns = maxi(1, ItemDatabase.instance.generator_order.size())
+		_gen_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		_gen_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		# Bounded carousel height: compact cards, controlled strip.
+		_gen_scroll.custom_minimum_size = Vector2(0, 118)
+		_gen_header.visible = false
+	else:
+		if _gen_panel.get_parent() != _middle:
+			_gen_panel.reparent(_middle)
+		_middle.move_child(_gen_panel, _middle.get_child_count() - 1)
+		_gen_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_gen_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_gen_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_gen_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		_gen_scroll.custom_minimum_size = Vector2.ZERO
+		_gen_header.visible = true
+	# Customer strip/rail placement + scroll direction per mode.
+	if mode == 2:
+		if _orders_panel.get_parent() != _middle:
+			_orders_panel.reparent(_middle)
+		_middle.move_child(_orders_panel, 0)
+		_orders_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_orders_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_order_row.columns = 1
+		_order_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_order_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		_order_scroll.custom_minimum_size = Vector2.ZERO
+	else:
+		if _orders_panel.get_parent() != _root_box:
+			_orders_panel.reparent(_root_box)
+		_root_box.move_child(_orders_panel, 1)
+		_orders_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		_orders_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_order_row.columns = GameStateStore.instance.MAX_ORDERS
+		_order_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		_order_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_order_scroll.custom_minimum_size = Vector2(0, 64)
 
 # --- Signals / shared logic (unchanged gameplay) --------------------------------
 
@@ -375,7 +474,7 @@ func _connect_signals() -> void:
 		_xp_bar.value = xp)
 	GameStateStore.instance.leveled_up.connect(func(lvl: int) -> void:
 		SoundFx.instance.play("levelup")
-		_show_toast("Level %d reached! Bonus coins awarded — check Generators for new unlocks." % lvl)
+		_show_toast("Level %d reached! Bonus coins awarded - check Generators for new unlocks." % lvl)
 		_refresh_all())
 	GameStateStore.instance.orders_changed.connect(_refresh_orders)
 	board.board_changed.connect(func() -> void: _mark_dirty(); _refresh_orders(); _refresh_expand(); _sync_selection_from_board())
@@ -406,11 +505,11 @@ func _process(delta: float) -> void:
 func _on_produce(gen_id: String) -> void:
 	var state := GameStateStore.instance.generator_state(gen_id)
 	if not bool(state.get("unlocked", false)):
-		_show_toast("That generator is locked — unlock it first.")
+		_show_toast("That generator is locked - unlock it first.")
 		SoundFx.instance.play("error")
 		return
 	if float(state.get("energy", 0.0)) < 1.0:
-		_show_toast("Generator is recharging — energy refills over time.")
+		_show_toast("Generator is recharging - energy refills over time.")
 		SoundFx.instance.play("error")
 		return
 	if board.find_empty_cell() < 0:
@@ -486,16 +585,14 @@ func _show_selected_item(item_id: String) -> void:
 	var def := ItemDatabase.instance.get_item(item_id)
 	for child in _selected_icon.get_children():
 		child.queue_free()
-	_selected_icon.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex(str(def.get("color", "999999"))), 10))
-	_selected_icon.add_child(UiStyle.icon_rect(str(def.get("icon", "")), Vector2(34, 34), Color.WHITE))
-	_selected_title.text = "%s • Tier %s • %s" % [str(def.get("name", item_id)), str(def.get("tier", "-")), str(def.get("rarity", ""))]
-	var extra := ""
-	if str(def.get("source_url", "")) != "":
-		extra += "  Source: " + str(def["source_url"])
-	_selected_desc.text = str(def.get("description", "")) + extra
+	_selected_icon.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex(str(def.get("color", "999999"))), 9))
+	_selected_icon.add_child(UiStyle.icon_rect(str(def.get("icon", "")), Vector2(32, 32), Color.WHITE))
+	_selected_title.text = "%s - Tier %s - %s" % [str(def.get("name", item_id)), str(def.get("tier", "-")), str(def.get("rarity", ""))]
+	_selected_desc.text = str(def.get("description", ""))
 	_selected_desc.tooltip_text = _selected_desc.text
 	_sell_btn.text = "Sell %d" % int(def.get("sell_value", 0))
 	_sell_btn.disabled = false
+	_sel_overlay.visible = true
 
 func _sync_selection_from_board() -> void:
 	var selected: int = board.selected_cell()
@@ -505,13 +602,12 @@ func _sync_selection_from_board() -> void:
 		_show_selected_item(str(board.cells_items[selected]))
 
 func _clear_selection() -> void:
+	# Contextual overlay: hiding it returns its space to the board.
+	# Selection itself stays owned by Board (single source of truth).
 	board.set_selected_cell(-1)
-	for child in _selected_icon.get_children():
-		child.queue_free()
-	_selected_icon.add_theme_stylebox_override("panel", UiStyle.panel_style(Color(0, 0, 0, 0.06), 10))
-	_selected_title.text = "No item selected"
-	_selected_desc.text = "Tap a board item to see it here. Drag items to move, swap or merge."
 	_sell_btn.disabled = true
+	if _sel_overlay:
+		_sel_overlay.visible = false
 
 func _on_sell_selected() -> void:
 	var selected: int = board.selected_cell()
@@ -538,7 +634,6 @@ func _on_expand_board() -> void:
 		_show_toast("Board expanded! A new row is unlocked.")
 		_mark_dirty()
 		_refresh_expand()
-		_apply_layout.call_deferred()
 	else:
 		SoundFx.instance.play("error")
 		_show_toast("Not enough coins to expand the board.")

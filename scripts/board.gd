@@ -1,6 +1,10 @@
 class_name Board
-extends Control
-## Adaptive-column merge board (4-7 columns by measured width).
+extends ScrollContainer
+## Merge board viewport: a clipped, vertically scrolling board area.
+## Board IS the ScrollContainer, so the board can never paint outside its
+## viewport: cell size is derived from the measured viewport WIDTH only,
+## and when the visible rows need more height than the viewport offers,
+## the inner content grows and scrolls vertically instead of overflowing.
 ## Owns item placement state (cell_index -> item_id),
 ## move / swap / merge rules, drop highlighting and merge feedback.
 
@@ -11,6 +15,13 @@ signal invalid_action(message: String)
 
 const COLUMNS := 7
 const TILE_SCENE_HINT := "item_tile"
+const GAP := 8.0
+## Cells smaller than this are not comfortable touch targets; below it the
+## column count drops (7 -> 6 -> 5 -> 4) instead of shrinking further.
+const MIN_USABLE_CELL := 52.0
+## Reserved for the vertical scroll bar so the last column is never
+## partially hidden underneath it.
+const SCROLLBAR_RESERVE := 14.0
 
 var cells_items: Dictionary = {}   # int cell -> String item_id
 var _cells: Array = []              # BoardCell nodes by index
@@ -20,22 +31,30 @@ var _selected_cell: int = -1
 var _cell_px: int = 0
 var _column_count: int = 7
 var _relayout_guard: bool = false
+var _content: Control
 
 func _ready() -> void:
-	# Plain Control board: cells are positioned explicitly in _relayout()
-	# from this control's measured rect. Container minimum-size negotiation
-	# can therefore never feed back into (and deadlock) the sizing.
-	mouse_filter = MOUSE_FILTER_IGNORE
+	# Board is its own clipped viewport. Horizontal scrolling is never
+	# needed (column count adapts to width); vertical scrolling engages
+	# only when the rows genuinely need more height than is available.
+	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_content = Control.new()
+	_content.name = "BoardContent"
+	_content.mouse_filter = MOUSE_FILTER_IGNORE
+	add_child(_content)
 	_build_cells()
-	# The board measures its own container rect; no guessed reserved sizes.
+	# Measure the real viewport rect after layout completes; recalc on
+	# any resize of the viewport or of the (scrollable) content.
 	resized.connect(_relayout)
+	_content.resized.connect(_relayout)
 	_relayout.call_deferred()
 
 func _build_cells() -> void:
 	for i in GameStateStore.instance.BOARD_MAX_CELLS:
 		var cell := BoardCell.new()
 		cell.setup(i, self, i >= GameStateStore.instance.board_cells_unlocked)
-		add_child(cell)
+		_content.add_child(cell)
 		_cells.append(cell)
 
 func visible_rows() -> int:
@@ -83,40 +102,58 @@ func _update_visibility() -> void:
 		# Fully locked rows stay hidden until expansion reveals them.
 		_cells[i].visible = i < shown
 
-## Measured layout: column count comes from the board's actual width
-## (enough room for a usable touch cell), cell size is then limited by
-## both width and the height needed for the visible rows. Cell indices
-## are never remapped - cells are repositioned from the same ordered
-## list, so saves restore identical logical positions on any device.
+## Measured layout, no guessed sizes and no overflow:
+##  1. Column count comes from the measured viewport width - the largest
+##     of 7/6/5/4 columns whose cells stay >= MIN_USABLE_CELL.
+##  2. Cell size comes from WIDTH ONLY. Height never crushes cells to a
+##     floor value that then spills outside the parent.
+##  3. The inner content is sized to the full grid; if that is taller
+##     than the viewport, ScrollContainer clips and scrolls vertically.
+## Cell indices are never remapped - cells are repositioned from the same
+## ordered list, so saves restore identical logical positions anywhere.
 func _relayout() -> void:
-	if _relayout_guard or size.x < 40.0 or size.y < 40.0:
+	if _relayout_guard or _content == null or size.x < 40.0 or size.y < 40.0:
 		return
-	var gap := 8.0
+	var avail_w := size.x - SCROLLBAR_RESERVE
 	var cols := 4
 	for candidate in [7, 6, 5, 4]:
-		if (size.x - float(candidate - 1) * gap) / float(candidate) >= 46.0:
+		if (avail_w - float(candidate - 1) * GAP) / float(candidate) >= MIN_USABLE_CELL:
 			cols = candidate
 			break
+	var px_w := maxi(24, int((avail_w - float(cols - 1) * GAP) / float(cols)))
 	var rows := int(ceil(float(maxi(1, GameStateStore.instance.board_cells_unlocked)) / float(cols)))
-	var cell_w := (size.x - float(cols - 1) * gap) / float(cols)
-	var cell_h := (size.y - float(maxi(0, rows - 1)) * gap) / float(maxi(1, rows))
-	var px := maxi(28, int(minf(cell_w, cell_h)))
+	# Prefer showing every visible row at once: shrink cells towards the
+	# height fit, but only while they stay usable touch targets. If the
+	# height fit would crush cells below MIN_USABLE_CELL (expanded board,
+	# short landscape screens), keep the width-derived size and let the
+	# viewport scroll vertically - cells are never forced past the area.
+	var px_fit := int((size.y - float(maxi(0, rows - 1)) * GAP) / float(maxi(1, rows)))
+	var px := px_w
+	if px_fit >= int(MIN_USABLE_CELL):
+		px = mini(px_w, px_fit)
+	var grid := Vector2(cols * px + (cols - 1) * GAP, rows * px + maxi(0, rows - 1) * GAP)
+	# The guard covers relayout triggering itself indirectly via content
+	# resizing; the minimum-size set below is also change-only, so a
+	# second pass with identical results emits no further resizes.
 	_relayout_guard = true
-	var changed := px != _cell_px or cols != _column_count
 	_column_count = cols
-	_cell_px = px
+	if px != _cell_px:
+		_cell_px = px
+		for c in _tiles:
+			_tiles[c].set_compact(px < 64)
 	_update_visibility()
-	var total := Vector2(cols * px + (cols - 1) * gap, rows * px + maxi(0, rows - 1) * gap)
-	var origin := (size - total) * 0.5
+	# Content fills the viewport when the grid is small (cells centred),
+	# and grows past it (scrolling) when the grid is tall.
+	var content_min := Vector2(maxf(grid.x, size.x), maxf(grid.y, size.y))
+	if _content.custom_minimum_size != content_min:
+		_content.custom_minimum_size = content_min
+	var origin := Vector2(maxf(0.0, (_content.size.x - grid.x) * 0.5), maxf(0.0, (_content.size.y - grid.y) * 0.5))
 	for i in _cells.size():
 		var cell: BoardCell = _cells[i]
 		if not cell.visible:
 			continue
-		cell.position = origin + Vector2(float(i % cols) * (px + gap), floor(float(i) / float(cols)) * (px + gap))
+		cell.position = origin + Vector2(float(i % cols) * (px + GAP), floor(float(i) / float(cols)) * (px + GAP))
 		cell.size = Vector2(px, px)
-	if changed:
-		for c in _tiles:
-			_tiles[c].set_compact(px < 64)
 	_relayout_guard = false
 
 # --- Queries ---------------------------------------------------------------

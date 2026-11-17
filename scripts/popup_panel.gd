@@ -31,9 +31,13 @@ func _ready() -> void:
 	close_btn.pressed.connect(func() -> void: visible = false)
 	head.add_child(close_btn)
 	_scroll = ScrollContainer.new()
-	_scroll.custom_minimum_size = Vector2(200, 160)
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_scroll)
+	# Refuse to overflow: refit to the live viewport whenever it changes.
+	get_tree().root.size_changed.connect(func() -> void:
+		if visible:
+			_fit_to_viewport())
 	_content = VBoxContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.add_theme_constant_override("separation", 8)
@@ -46,16 +50,20 @@ func _clear() -> void:
 func open(title: String) -> void:
 	_title.text = title
 	_clear()
-	# Size to the actual viewport so the modal never overflows small screens.
+	_fit_to_viewport()
+	visible = true
+
+func _fit_to_viewport() -> void:
+	# Size to the actual viewport so the modal never overflows small
+	# screens - including short landscape phones (height can be < 400).
 	var vp := get_viewport_rect().size
-	var w: float = clampf(vp.x * 0.94, 300.0, 720.0)
-	var h: float = clampf(vp.y * 0.88, 300.0, 580.0)
+	var w: float = minf(vp.x * 0.94, 720.0)
+	var h: float = minf(vp.y * 0.90, 580.0)
 	offset_left = -w * 0.5
 	offset_right = w * 0.5
 	offset_top = -h * 0.5
 	offset_bottom = h * 0.5
-	_scroll.custom_minimum_size = Vector2(maxf(180.0, w - 48.0), maxf(160.0, h - 110.0))
-	visible = true
+	_scroll.custom_minimum_size = Vector2(maxf(160.0, w - 48.0), maxf(120.0, h - 104.0))
 
 ## Coloured tile with the item's white silhouette icon, used in lists.
 func _item_icon(item_id: String, px: int = 46) -> PanelContainer:
