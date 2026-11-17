@@ -21,7 +21,7 @@ func _ready() -> void:
 	center.add_child(panel)
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 10)
-	vbox.custom_minimum_size = Vector2(420, 0)
+	vbox.custom_minimum_size = Vector2(minf(400.0, maxf(260.0, get_viewport_rect().size.x - 32.0)), 0)
 	panel.add_child(vbox)
 	var title := UiStyle.label("Merge Code", 42, UiStyle.ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -56,7 +56,6 @@ func _ready() -> void:
 	vbox.add_child(version)
 	_help = MergePopupPanel.new()
 	_help.set_anchors_preset(Control.PRESET_CENTER)
-	_help.custom_minimum_size = Vector2(620, 520)
 	add_child(_help)
 
 func _on_new_game() -> void:

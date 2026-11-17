@@ -11,7 +11,7 @@ Modular but deliberately small. Scenes are thin shells (`scenes/main_menu.tscn`,
 | `SoundManager` autoload (`scripts/autoload/sound_manager.gd`, class `SoundFx`) | Procedural WAV tone effects; no audio assets; honours `GameState.sound_enabled`. |
 
 ## Gameplay/UI scripts
-- `scripts/board.gd` + `board_cell.gd` + `item_tile.gd` — grid, placement state (`cell -> item_id`), move/swap/merge rules, drop preview highlighting, merge pop/float feedback, board (de)serialisation. Uses Godot's native `_get_drag_data`/`_can_drop_data`/`_drop_data` (mouse + touch).
+- `scripts/board.gd` + `board_cell.gd` + `item_tile.gd` — placement state (`cell -> item_id`), move/swap/merge rules, drop preview highlighting, merge pop/float feedback, board (de)serialisation. The board is a plain `Control` that measures its own rect on `resized`, picks 4-7 columns by available width, derives cell size from width and visible-row height, and positions cells explicitly (no container minimum-size feedback, no guessed reserved dimensions in the main scene). Column changes never remap cell indices, so saves are device-independent. Uses Godot's native `_get_drag_data`/`_can_drop_data`/`_drop_data` (mouse + touch).
 - `scripts/generator_card.gd` — produce (energy), unlock, upgrade UI; energy regen is ticked from `main.gd._process`.
 - `scripts/order_card.gd` — requirement checklist vs live board counts, deliver/dismiss.
 - `scripts/popup_panel.gd` — Crafting, Catalog, Missions, Shop, Help modals; every button acts on `Board`/`GameState` directly.

@@ -18,14 +18,16 @@ var _name_label: Label
 var _wants_row: HBoxContainer
 var _state_label: Label
 var _deliver_btn: Button
+var _compact: bool = false
+var _board_ref: Board
 
 func setup(p_index: int) -> void:
 	order_index = p_index
 	_build()
-	refresh(null)
+	refresh(_board_ref)
 
 func _build() -> void:
-	custom_minimum_size = Vector2(330, 0)
+	custom_minimum_size = Vector2(292, 0)
 	add_theme_stylebox_override("panel", UiStyle.Kenney_panel_style("grey"))
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 8)
@@ -69,6 +71,10 @@ func _build() -> void:
 	actions.add_child(dismiss)
 
 func refresh(board: Board) -> void:
+	if board != null:
+		_board_ref = board
+	elif _board_ref != null:
+		board = _board_ref
 	if order_index < 0 or order_index >= GameStateStore.instance.orders.size():
 		return
 	var order: Dictionary = GameStateStore.instance.orders[order_index]
@@ -109,7 +115,7 @@ func celebrate() -> void:
 func _want_chip(item_id: String, have: int, need: int, done: bool) -> Control:
 	var def := ItemDatabase.instance.get_item(item_id)
 	var chip := PanelContainer.new()
-	chip.custom_minimum_size = Vector2(46, 46)
+	chip.custom_minimum_size = Vector2(36, 36) if _compact else Vector2(42, 42)
 	var bg := UiStyle.hex(str(def.get("color", "999999"))).lightened(0.05)
 	chip.add_theme_stylebox_override("panel", UiStyle.panel_style(bg, 10, UiStyle.GREEN if done else Color(0, 0, 0, 0.10)))
 	chip.tooltip_text = "%s: %d/%d" % [ItemDatabase.instance.item_name(item_id), have, need]
@@ -120,6 +126,16 @@ func _want_chip(item_id: String, have: int, need: int, done: bool) -> Control:
 	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	chip.add_child(badge)
 	return chip
+
+func set_compact(compact: bool) -> void:
+	# Narrow/short screens: smaller portrait, state text moves to tooltip.
+	_compact = compact
+	custom_minimum_size = Vector2(258, 0) if compact else Vector2(292, 0)
+	if _portrait:
+		_portrait.custom_minimum_size = Vector2(46, 46) if compact else Vector2(58, 58)
+	if _state_label:
+		_state_label.visible = not compact
+	refresh(null)
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if typeof(data) != TYPE_DICTIONARY or str(data.get("type", "")) != "board_item":

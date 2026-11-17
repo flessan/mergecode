@@ -11,15 +11,12 @@ func setup(p_index: int, p_board: Node, p_locked: bool) -> void:
 	cell_index = p_index
 	board = p_board
 	locked = p_locked
-	custom_minimum_size = Vector2(92, 92)
+	custom_minimum_size = Vector2.ZERO  # Board positions/sizes cells explicitly
 	_refresh()
 
 func set_locked(value: bool) -> void:
 	locked = value
 	_refresh()
-
-func set_cell_size(px: int) -> void:
-	custom_minimum_size = Vector2(px, px)
 
 func _refresh() -> void:
 	add_theme_stylebox_override("panel", UiStyle.Kenney_slot_style(locked))

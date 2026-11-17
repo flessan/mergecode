@@ -1,6 +1,7 @@
 class_name Board
-extends GridContainer
-## 7-column merge board. Owns item placement state (cell_index -> item_id),
+extends Control
+## Adaptive-column merge board (4-7 columns by measured width).
+## Owns item placement state (cell_index -> item_id),
 ## move / swap / merge rules, drop highlighting and merge feedback.
 
 signal board_changed
@@ -16,13 +17,19 @@ var _cells: Array = []              # BoardCell nodes by index
 var _tiles: Dictionary = {}         # int cell -> ItemTile
 var _highlighted_cell: int = -1
 var _selected_cell: int = -1
-var _cell_px: int = 92
+var _cell_px: int = 0
+var _column_count: int = 7
+var _relayout_guard: bool = false
 
 func _ready() -> void:
-	columns = COLUMNS
-	add_theme_constant_override("h_separation", 8)
-	add_theme_constant_override("v_separation", 8)
+	# Plain Control board: cells are positioned explicitly in _relayout()
+	# from this control's measured rect. Container minimum-size negotiation
+	# can therefore never feed back into (and deadlock) the sizing.
+	mouse_filter = MOUSE_FILTER_IGNORE
 	_build_cells()
+	# The board measures its own container rect; no guessed reserved sizes.
+	resized.connect(_relayout)
+	_relayout.call_deferred()
 
 func _build_cells() -> void:
 	for i in GameStateStore.instance.BOARD_MAX_CELLS:
@@ -32,46 +39,54 @@ func _build_cells() -> void:
 		_cells.append(cell)
 
 func visible_rows() -> int:
-	return int(ceil(float(GameStateStore.instance.board_cells_unlocked) / float(COLUMNS)))
+	return int(ceil(float(GameStateStore.instance.board_cells_unlocked) / float(_column_count)))
 
 func refresh_locks() -> void:
-	var shown := visible_rows() * COLUMNS
+	_update_visibility()
+	_relayout()
+
+func _update_visibility() -> void:
+	var shown := visible_rows() * _column_count
 	for i in _cells.size():
 		_cells[i].set_locked(i >= GameStateStore.instance.board_cells_unlocked)
-		# Fully locked rows stay hidden until expansion reveals them, so the
-		# board always fits its surface without shrinking cells to nothing.
+		# Fully locked rows stay hidden until expansion reveals them.
 		_cells[i].visible = i < shown
 
-func set_cell_size(px: int) -> void:
-	_cell_px = px
-	for cell in _cells:
-		cell.set_cell_size(px)
-	for c in _tiles:
-		_tiles[c].set_compact(px < 64)
-
-# --- Selection (Board owns it: Board owns the tile instances) ----------------
-
-func selected_cell() -> int:
-	return _selected_cell
-
-func set_selected_cell(cell: int) -> void:
-	_selected_cell = cell
-	for c in _tiles:
-		_tiles[c].set_selected(int(c) == cell)
-
-func spawn_burst(cell: int) -> void:
-	if cell < 0 or cell >= _cells.size():
+## Measured layout: column count comes from the board's actual width
+## (enough room for a usable touch cell), cell size is then limited by
+## both width and the height needed for the visible rows. Cell indices
+## are never remapped - cells are repositioned from the same ordered
+## list, so saves restore identical logical positions on any device.
+func _relayout() -> void:
+	if _relayout_guard or size.x < 40.0 or size.y < 40.0:
 		return
-	var burst := UiStyle.icon_rect("res://assets/sprites/effects/starburst.svg", Vector2(30, 30), Color.WHITE)
-	burst.set_anchors_preset(Control.PRESET_CENTER)
-	_cells[cell].add_child(burst)
-	burst.scale = Vector2(0.3, 0.3)
-	burst.pivot_offset = Vector2(15, 15)
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(burst, "scale", Vector2(2.6, 2.6), 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(burst, "modulate:a", 0.0, 0.5)
-	tween.chain().tween_callback(burst.queue_free)
+	var gap := 8.0
+	var cols := 4
+	for candidate in [7, 6, 5, 4]:
+		if (size.x - float(candidate - 1) * gap) / float(candidate) >= 46.0:
+			cols = candidate
+			break
+	var rows := int(ceil(float(maxi(1, GameStateStore.instance.board_cells_unlocked)) / float(cols)))
+	var cell_w := (size.x - float(cols - 1) * gap) / float(cols)
+	var cell_h := (size.y - float(maxi(0, rows - 1)) * gap) / float(maxi(1, rows))
+	var px := maxi(28, int(minf(cell_w, cell_h)))
+	_relayout_guard = true
+	var changed := px != _cell_px or cols != _column_count
+	_column_count = cols
+	_cell_px = px
+	_update_visibility()
+	var total := Vector2(cols * px + (cols - 1) * gap, rows * px + maxi(0, rows - 1) * gap)
+	var origin := (size - total) * 0.5
+	for i in _cells.size():
+		var cell: BoardCell = _cells[i]
+		if not cell.visible:
+			continue
+		cell.position = origin + Vector2(float(i % cols) * (px + gap), floor(float(i) / float(cols)) * (px + gap))
+		cell.size = Vector2(px, px)
+	if changed:
+		for c in _tiles:
+			_tiles[c].set_compact(px < 64)
+	_relayout_guard = false
 
 # --- Queries ---------------------------------------------------------------
 
@@ -143,7 +158,7 @@ func _spawn_tile(cell: int, animate: bool) -> void:
 	tile.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_cells[cell].add_child(tile)
 	_tiles[cell] = tile
-	tile.set_compact(_cell_px < 64)
+	tile.set_compact(_cell_px > 0 and _cell_px < 64)
 	tile.tile_clicked.connect(_on_tile_clicked)
 	if animate:
 		tile.pop_animation()

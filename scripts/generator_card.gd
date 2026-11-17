@@ -53,7 +53,7 @@ func _build() -> void:
 	body.add_child(energy_head)
 	energy_head.add_child(UiStyle.icon_rect(ENERGY_ICON, Vector2(15, 15), UiStyle.hex("E8A33D")))
 	_energy_bar = ProgressBar.new()
-	_energy_bar.custom_minimum_size = Vector2(82, 15)
+	_energy_bar.custom_minimum_size = Vector2(0, 15)
 	_energy_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UiStyle.style_Kenney_progress(_energy_bar, "yellow")
 	energy_head.add_child(_energy_bar)

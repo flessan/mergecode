@@ -219,14 +219,10 @@ func _build_board_area(parent: VBoxContainer) -> void:
 	surf_style.set_content_margin_all(18)
 	surface.add_theme_stylebox_override("panel", surf_style)
 	vbox.add_child(surface)
-	var board_scroll := ScrollContainer.new()
-	surface.add_child(board_scroll)
-	var center := CenterContainer.new()
-	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	board_scroll.add_child(center)
 	board = Board.new()
-	center.add_child(board)
+	board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	surface.add_child(board)
 	# Selected item bar (icon-first, compact).
 	var selected_panel := PanelContainer.new()
 	selected_panel.add_theme_stylebox_override("panel", UiStyle.Kenney_panel_style("grey", Color(1.0, 0.94, 0.80, 1.0)))
@@ -324,9 +320,10 @@ func _apply_layout() -> void:
 	if not is_inside_tree() or board == null:
 		return
 	var vp := get_viewport_rect().size
-	# Landscape/tablet/desktop keeps the generator dock beside the board.
-	# Portrait and compact windows stack it underneath as a horizontal dock.
-	var wide := vp.x >= 900.0 and vp.x >= vp.y * 0.85
+	# Landscape/desktop: generator dock beside the board. Portrait/compact:
+	# dock underneath as a horizontal strip. The board itself measures its
+	# container (Board._relayout) - no reserved-size guessing here.
+	var wide := (vp.x >= 900.0 and vp.x >= vp.y * 0.85) or (vp.x >= 740.0 and vp.x >= vp.y * 1.6)
 	if not _layout_applied or wide != _wide_mode:
 		_layout_applied = true
 		_wide_mode = wide
@@ -336,7 +333,6 @@ func _apply_layout() -> void:
 			_gen_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			_gen_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 			_gen_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-			_gen_scroll.custom_minimum_size = Vector2.ZERO
 		else:
 			if _gen_panel.get_parent() != _board_col:
 				_gen_panel.reparent(_board_col)
@@ -344,15 +340,17 @@ func _apply_layout() -> void:
 			_gen_grid.columns = maxi(1, ItemDatabase.instance.generator_order.size())
 			_gen_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 			_gen_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-			_gen_scroll.custom_minimum_size = Vector2(0, 224)
+		_gen_scroll.custom_minimum_size = Vector2.ZERO
 	if wide:
-		var dock_width := 340.0 if vp.x >= 1220.0 else 184.0
+		var dock_width := 336.0 if vp.x >= 1220.0 else 184.0
 		_gen_panel.custom_minimum_size = Vector2(dock_width, 0)
 		_gen_grid.columns = 2 if vp.x >= 1220.0 else 1
 	else:
-		_gen_panel.custom_minimum_size = Vector2(0, 278)
+		_gen_panel.custom_minimum_size = Vector2.ZERO
 	for card in _gen_cards.values():
 		(card as GeneratorCard).set_dock_compact(not wide)
+	for card in _order_cards:
+		(card as OrderCard).set_compact(vp.x < 760.0 or vp.y < 760.0)
 	# Compact HUD: preserve coin/level controls, drop secondary labels first.
 	var compact := vp.x < 680.0
 	if _hud_title:
@@ -366,14 +364,6 @@ func _apply_layout() -> void:
 	if _menu_btn:
 		_menu_btn.text = "Menu" if compact else "Main Menu"
 	_xp_bar.custom_minimum_size = Vector2(58, 15) if compact else Vector2(110, 15)
-	# Board cells use visible rows, not the final 7-row expansion state.
-	var rows := maxi(1, board.visible_rows())
-	var reserved_w := (340.0 if (wide and vp.x >= 1220.0) else (184.0 if wide else 28.0)) + 76.0
-	var reserved_h := 505.0 if wide else 770.0
-	var cell_w := (vp.x - reserved_w) / 7.0
-	var cell_h := (vp.y - reserved_h) / float(rows)
-	var cell := int(clampf(minf(cell_w, cell_h), 44.0, 118.0))
-	board.set_cell_size(cell)
 
 # --- Signals / shared logic (unchanged gameplay) --------------------------------
 

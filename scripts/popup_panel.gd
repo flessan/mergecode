@@ -31,7 +31,7 @@ func _ready() -> void:
 	close_btn.pressed.connect(func() -> void: visible = false)
 	head.add_child(close_btn)
 	_scroll = ScrollContainer.new()
-	_scroll.custom_minimum_size = Vector2(560, 420)
+	_scroll.custom_minimum_size = Vector2(200, 160)
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_scroll)
 	_content = VBoxContainer.new()
@@ -54,7 +54,7 @@ func open(title: String) -> void:
 	offset_right = w * 0.5
 	offset_top = -h * 0.5
 	offset_bottom = h * 0.5
-	_scroll.custom_minimum_size = Vector2(w - 48.0, h - 110.0)
+	_scroll.custom_minimum_size = Vector2(maxf(180.0, w - 48.0), maxf(160.0, h - 110.0))
 	visible = true
 
 ## Coloured tile with the item's white silhouette icon, used in lists.
@@ -147,7 +147,7 @@ func show_catalog() -> void:
 	for item_id in ItemDatabase.instance.item_order:
 		var def := ItemDatabase.instance.get_item(str(item_id))
 		var cell := PanelContainer.new()
-		cell.custom_minimum_size = Vector2(128, 84)
+		cell.custom_minimum_size = Vector2(108, 76)
 		var found := GameStateStore.instance.is_discovered(str(item_id))
 		var bg := UiStyle.hex(str(def.get("color", "999999"))).lightened(0.62) if found else UiStyle.CELL_LOCKED
 		cell.add_theme_stylebox_override("panel", UiStyle.panel_style(bg, 10))
