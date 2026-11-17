@@ -1,0 +1,68 @@
+{
+  "customers": [
+    {
+      "id": "indie_dev",
+      "name": "Alex Rivera the Indie Dev",
+      "role": "Indie Developer",
+      "color": "4A90D9",
+      "initials": "AR",
+      "bio": "Ships small games from a tiny studio."
+    },
+    {
+      "id": "startup",
+      "name": "Priya Sharma the Founder",
+      "role": "Startup Founder",
+      "color": "E8873A",
+      "initials": "PS",
+      "bio": "Needs an MVP before the next demo day."
+    },
+    {
+      "id": "student",
+      "name": "Ken Watanabe the Student",
+      "role": "CS Student",
+      "color": "6BCB77",
+      "initials": "KT",
+      "bio": "Learning to code, one project at a time."
+    },
+    {
+      "id": "sysadmin",
+      "name": "Maria Garcia the Sysadmin",
+      "role": "System Administrator",
+      "color": "3AA6A0",
+      "initials": "MG",
+      "bio": "Keeps servers alive and backed up."
+    },
+    {
+      "id": "designer",
+      "name": "June Park the Designer",
+      "role": "Product Designer",
+      "color": "D96C8A",
+      "initials": "JP",
+      "bio": "Wants prototypes that feel real."
+    },
+    {
+      "id": "data_lead",
+      "name": "Omar Haddad the Analyst",
+      "role": "Data Analyst",
+      "color": "9B6BD9",
+      "initials": "OH",
+      "bio": "Turns raw data into decisions."
+    },
+    {
+      "id": "oss",
+      "name": "Freja Lindqvist the Maintainer",
+      "role": "Open-Source Maintainer",
+      "color": "D9A441",
+      "initials": "FL",
+      "bio": "Reviews pull requests at midnight."
+    },
+    {
+      "id": "studio",
+      "name": "Diego Torres the Studio Lead",
+      "role": "Game Studio Lead",
+      "color": "D96C4A",
+      "initials": "DT",
+      "bio": "Scaling a hit game to new platforms."
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "recipes": [
+    {
+      "id": "recipe_website_pro",
+      "result_id": "website_pro",
+      "ingredient_ids": [
+        "web_4",
+        "data_3"
+      ],
+      "name": "Professional Website"
+    },
+    {
+      "id": "recipe_mobile_app",
+      "result_id": "mobile_app",
+      "ingredient_ids": [
+        "language_4",
+        "web_3"
+      ],
+      "name": "Mobile App"
+    },
+    {
+      "id": "recipe_indie_game",
+      "result_id": "indie_game",
+      "ingredient_ids": [
+        "engine_3",
+        "tool_2"
+      ],
+      "name": "Indie Game Release"
+    },
+    {
+      "id": "recipe_cloud_api",
+      "result_id": "cloud_api",
+      "ingredient_ids": [
+        "language_4",
+        "data_4"
+      ],
+      "name": "Cloud API"
+    },
+    {
+      "id": "recipe_data_toolkit",
+      "result_id": "data_toolkit",
+      "ingredient_ids": [
+        "language_2",
+        "data_5"
+      ],
+      "name": "Data Science Toolkit"
+    },
+    {
+      "id": "recipe_ecommerce",
+      "result_id": "ecommerce",
+      "ingredient_ids": [
+        "web_6",
+        "data_4"
+      ],
+      "name": "E-Commerce Platform"
+    },
+    {
+      "id": "recipe_devops_suite",
+      "result_id": "devops_suite",
+      "ingredient_ids": [
+        "tool_5",
+        "package_4"
+      ],
+      "name": "DevOps Suite"
+    },
+    {
+      "id": "recipe_open_ecosystem",
+      "result_id": "open_ecosystem",
+      "ingredient_ids": [
+        "package_6",
+        "tool_3"
+      ],
+      "name": "Open Source Ecosystem"
+    },
+    {
+      "id": "recipe_saas_platform",
+      "result_id": "saas_platform",
+      "ingredient_ids": [
+        "web_7",
+        "tool_5"
+      ],
+      "name": "SaaS Platform"
+    },
+    {
+      "id": "recipe_pro_workstation",
+      "result_id": "pro_workstation",
+      "ingredient_ids": [
+        "hardware_5",
+        "editor_6"
+      ],
+      "name": "Pro Workstation Build"
+    }
+  ]
+}

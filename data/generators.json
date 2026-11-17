@@ -1,0 +1,92 @@
+{
+  "generators": [
+    {
+      "id": "code_notebook",
+      "name": "Code Notebook",
+      "chain_id": "language",
+      "description": "Produces starter code items.",
+      "unlock_level": 1,
+      "unlock_cost": 0,
+      "max_energy": 6,
+      "regen_seconds": 4.0,
+      "base_upgrade_cost": 80
+    },
+    {
+      "id": "editor_studio",
+      "name": "Editor Studio",
+      "chain_id": "editor",
+      "description": "Produces editor and IDE items.",
+      "unlock_level": 1,
+      "unlock_cost": 0,
+      "max_energy": 6,
+      "regen_seconds": 4.0,
+      "base_upgrade_cost": 80
+    },
+    {
+      "id": "web_scaffold",
+      "name": "Web Scaffold",
+      "chain_id": "web",
+      "description": "Scaffolds web pages and apps.",
+      "unlock_level": 2,
+      "unlock_cost": 150,
+      "max_energy": 6,
+      "regen_seconds": 4.5,
+      "base_upgrade_cost": 120
+    },
+    {
+      "id": "toolbox",
+      "name": "Toolbox",
+      "chain_id": "tool",
+      "description": "Builds developer tools.",
+      "unlock_level": 3,
+      "unlock_cost": 300,
+      "max_energy": 6,
+      "regen_seconds": 4.5,
+      "base_upgrade_cost": 160
+    },
+    {
+      "id": "data_sprout",
+      "name": "Data Sprout",
+      "chain_id": "data",
+      "description": "Grows records into databases.",
+      "unlock_level": 4,
+      "unlock_cost": 600,
+      "max_energy": 6,
+      "regen_seconds": 5.0,
+      "base_upgrade_cost": 220
+    },
+    {
+      "id": "package_box",
+      "name": "Package Box",
+      "chain_id": "package",
+      "description": "Packs libraries and packages.",
+      "unlock_level": 6,
+      "unlock_cost": 1200,
+      "max_energy": 6,
+      "regen_seconds": 5.0,
+      "base_upgrade_cost": 300
+    },
+    {
+      "id": "game_lab",
+      "name": "Game Lab",
+      "chain_id": "engine",
+      "description": "Prototypes games and engines.",
+      "unlock_level": 8,
+      "unlock_cost": 2500,
+      "max_energy": 6,
+      "regen_seconds": 5.5,
+      "base_upgrade_cost": 420
+    },
+    {
+      "id": "hardware_bench",
+      "name": "Hardware Bench",
+      "chain_id": "hardware",
+      "description": "Assembles boards and machines.",
+      "unlock_level": 10,
+      "unlock_cost": 5000,
+      "max_energy": 6,
+      "regen_seconds": 5.5,
+      "base_upgrade_cost": 560
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "missions": [
+    {
+      "id": "merge_10",
+      "name": "Merge Apprentice",
+      "description": "Merge items 10 times",
+      "stat": "merges",
+      "target": 10,
+      "reward_coins": 100,
+      "reward_xp": 30
+    },
+    {
+      "id": "merge_50",
+      "name": "Merge Expert",
+      "description": "Merge items 50 times",
+      "stat": "merges",
+      "target": 50,
+      "reward_coins": 400,
+      "reward_xp": 100
+    },
+    {
+      "id": "merge_200",
+      "name": "Merge Master",
+      "description": "Merge items 200 times",
+      "stat": "merges",
+      "target": 200,
+      "reward_coins": 1500,
+      "reward_xp": 300
+    },
+    {
+      "id": "orders_5",
+      "name": "Helpful Dev",
+      "description": "Deliver 5 customer orders",
+      "stat": "orders_delivered",
+      "target": 5,
+      "reward_coins": 200,
+      "reward_xp": 60
+    },
+    {
+      "id": "orders_25",
+      "name": "Customer Favourite",
+      "description": "Deliver 25 customer orders",
+      "stat": "orders_delivered",
+      "target": 25,
+      "reward_coins": 900,
+      "reward_xp": 200
+    },
+    {
+      "id": "craft_3",
+      "name": "Assembler",
+      "description": "Craft 3 combined items",
+      "stat": "crafts",
+      "target": 3,
+      "reward_coins": 350,
+      "reward_xp": 90
+    },
+    {
+      "id": "discover_20",
+      "name": "Explorer",
+      "description": "Discover 20 different items",
+      "stat": "discovered_count",
+      "target": 20,
+      "reward_coins": 300,
+      "reward_xp": 80
+    },
+    {
+      "id": "discover_40",
+      "name": "Cataloguer",
+      "description": "Discover 40 different items",
+      "stat": "discovered_count",
+      "target": 40,
+      "reward_coins": 1000,
+      "reward_xp": 220
+    },
+    {
+      "id": "earn_5000",
+      "name": "Bootstrapper",
+      "description": "Earn 5,000 coins in total",
+      "stat": "coins_earned",
+      "target": 5000,
+      "reward_coins": 500,
+      "reward_xp": 120
+    },
+    {
+      "id": "generate_100",
+      "name": "Producer",
+      "description": "Generate 100 items",
+      "stat": "generated",
+      "target": 100,
+      "reward_coins": 350,
+      "reward_xp": 90
+    }
+  ]
+}
