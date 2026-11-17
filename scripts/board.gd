@@ -45,6 +45,37 @@ func refresh_locks() -> void:
 	_update_visibility()
 	_relayout()
 
+# --- Selection (Board owns it: Board owns the tile instances) ----------------
+
+func selected_cell() -> int:
+	return _selected_cell
+
+func set_selected_cell(cell: int) -> void:
+	# -1 clears the selection. Any other value must be a real board slot;
+	# out-of-range values clear instead of leaving a phantom selection.
+	if cell < -1 or cell >= GameStateStore.instance.BOARD_MAX_CELLS:
+		cell = -1
+	_selected_cell = cell
+	for c in _tiles:
+		_tiles[c].set_selected(int(c) == cell)
+
+## Merge / reward pop effect on a cell. Kept on Board (not the main scene)
+## because Board owns the cell nodes the burst is parented to.
+func spawn_burst(cell: int) -> void:
+	if cell < 0 or cell >= _cells.size():
+		return
+	var burst := UiStyle.icon_rect("res://assets/sprites/effects/starburst.svg", Vector2(30, 30), Color.WHITE)
+	burst.set_anchors_preset(Control.PRESET_CENTER)
+	_cells[cell].add_child(burst)
+	burst.scale = Vector2(0.3, 0.3)
+	burst.pivot_offset = Vector2(15, 15)
+	burst.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(burst, "scale", Vector2(2.6, 2.6), 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(burst, "modulate:a", 0.0, 0.5)
+	tween.chain().tween_callback(burst.queue_free)
+
 func _update_visibility() -> void:
 	var shown := visible_rows() * _column_count
 	for i in _cells.size():
@@ -158,6 +189,8 @@ func _spawn_tile(cell: int, animate: bool) -> void:
 	tile.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_cells[cell].add_child(tile)
 	_tiles[cell] = tile
+	# A rebuilt tile (move/swap/merge result) keeps the selection frame.
+	tile.set_selected(cell == _selected_cell)
 	tile.set_compact(_cell_px > 0 and _cell_px < 64)
 	tile.tile_clicked.connect(_on_tile_clicked)
 	if animate:
@@ -267,6 +300,7 @@ func serialize() -> Array:
 	return out
 
 func load_items(saved: Array) -> void:
+	_selected_cell = -1
 	cells_items.clear()
 	for cell in _tiles:
 		_tiles[cell].queue_free()

@@ -498,7 +498,7 @@ func _show_selected_item(item_id: String) -> void:
 	_sell_btn.disabled = false
 
 func _sync_selection_from_board() -> void:
-	var selected := board.selected_cell()
+	var selected: int = board.selected_cell()
 	if selected < 0 or not board.cells_items.has(selected):
 		_clear_selection()
 	else:
@@ -514,7 +514,7 @@ func _clear_selection() -> void:
 	_sell_btn.disabled = true
 
 func _on_sell_selected() -> void:
-	var selected := board.selected_cell()
+	var selected: int = board.selected_cell()
 	if selected < 0 or not board.cells_items.has(selected):
 		return
 	var item_id := str(board.cells_items[selected])
