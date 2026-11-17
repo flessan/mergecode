@@ -25,13 +25,13 @@ func setup(p_index: int) -> void:
 	refresh(null)
 
 func _build() -> void:
-	custom_minimum_size = Vector2(248, 0)
-	add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.PANEL, 14))
+	custom_minimum_size = Vector2(330, 0)
+	add_theme_stylebox_override("panel", UiStyle.Kenney_panel_style("grey"))
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 8)
 	add_child(hbox)
-	_portrait = UiStyle.icon_rect("", Vector2(62, 62), Color.WHITE)
-	_portrait.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_portrait = UiStyle.icon_rect("", Vector2(58, 58), Color.WHITE)
+	_portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hbox.add_child(_portrait)
 	var vbox := VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -42,8 +42,6 @@ func _build() -> void:
 	_wants_row = HBoxContainer.new()
 	_wants_row.add_theme_constant_override("separation", 5)
 	vbox.add_child(_wants_row)
-	_state_label = UiStyle.label("", 11, UiStyle.MUTED)
-	vbox.add_child(_state_label)
 	var reward_row := HBoxContainer.new()
 	reward_row.add_theme_constant_override("separation", 4)
 	vbox.add_child(reward_row)
@@ -51,17 +49,24 @@ func _build() -> void:
 	var reward := UiStyle.label("", 12, UiStyle.INK)
 	reward_row.add_child(reward)
 	set_meta("reward_label", reward)
-	var star := UiStyle.label("", 11, UiStyle.MUTED)
-	reward_row.add_child(star)
-	set_meta("xp_label", star)
-	_deliver_btn = UiStyle.make_icon_button(CHECK_ICON, "Deliver", UiStyle.GREEN, 13)
-	_deliver_btn.custom_minimum_size = Vector2(0, 34)
+	var xp := UiStyle.label("", 11, UiStyle.MUTED)
+	reward_row.add_child(xp)
+	set_meta("xp_label", xp)
+	_state_label = UiStyle.label("", 11, UiStyle.MUTED)
+	vbox.add_child(_state_label)
+	var actions := VBoxContainer.new()
+	actions.custom_minimum_size = Vector2(92, 0)
+	actions.add_theme_constant_override("separation", 4)
+	hbox.add_child(actions)
+	_deliver_btn = UiStyle.make_Kenney_icon_button(CHECK_ICON, "Deliver", "green", 12)
+	_deliver_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_deliver_btn.pressed.connect(func() -> void: deliver_requested.emit(order_index))
-	vbox.add_child(_deliver_btn)
-	var dismiss := UiStyle.make_button("New customer", Color("B9AC97"), 11)
-	dismiss.custom_minimum_size = Vector2(0, 26)
+	actions.add_child(_deliver_btn)
+	var dismiss := UiStyle.make_Kenney_button("New", "grey", 10, true)
+	dismiss.custom_minimum_size = Vector2(0, 30)
+	dismiss.tooltip_text = "Replace this customer"
 	dismiss.pressed.connect(func() -> void: dismiss_requested.emit(order_index))
-	vbox.add_child(dismiss)
+	actions.add_child(dismiss)
 
 func refresh(board: Board) -> void:
 	if order_index < 0 or order_index >= GameStateStore.instance.orders.size():
@@ -87,7 +92,19 @@ func refresh(board: Board) -> void:
 		_wants_row.add_child(_want_chip(str(item_id), have, need, handed >= need))
 	_state_label.text = "Ready to deliver!" if all_ready else "Drag items here or use Deliver"
 	_state_label.add_theme_color_override("font_color", UiStyle.GREEN if all_ready else UiStyle.MUTED)
+	if all_ready:
+		var ready_style := UiStyle.Kenney_panel_style("grey", Color(0.82, 1.0, 0.86, 1.0))
+		add_theme_stylebox_override("panel", ready_style)
+	else:
+		add_theme_stylebox_override("panel", UiStyle.Kenney_panel_style("grey"))
 	_deliver_btn.disabled = not all_ready
+
+func celebrate() -> void:
+	# A quick portrait/card bounce used by Main immediately before payout.
+	pivot_offset = size * 0.5
+	var tween := create_tween()
+	tween.tween_property(self, "scale", Vector2(1.045, 1.045), 0.09)
+	tween.tween_property(self, "scale", Vector2.ONE, 0.18)
 
 func _want_chip(item_id: String, have: int, need: int, done: bool) -> Control:
 	var def := ItemDatabase.instance.get_item(item_id)

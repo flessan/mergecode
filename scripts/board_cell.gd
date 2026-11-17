@@ -22,13 +22,7 @@ func set_cell_size(px: int) -> void:
 	custom_minimum_size = Vector2(px, px)
 
 func _refresh() -> void:
-	var s := StyleBoxFlat.new()
-	s.bg_color = Color(0.16, 0.10, 0.04, 0.28) if not locked else Color(0.10, 0.08, 0.05, 0.45)
-	s.set_corner_radius_all(12)
-	s.set_border_width_all(2)
-	s.border_color = Color(0, 0, 0, 0.18)
-	s.set_content_margin_all(4)
-	add_theme_stylebox_override("panel", s)
+	add_theme_stylebox_override("panel", UiStyle.Kenney_slot_style(locked))
 	for child in get_children():
 		if child.name == "LockBox":
 			child.queue_free()

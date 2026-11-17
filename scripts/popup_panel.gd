@@ -18,7 +18,7 @@ func _ready() -> void:
 	offset_top = -260
 	offset_right = 310
 	offset_bottom = 260
-	add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.PANEL, 18))
+	add_theme_stylebox_override("panel", UiStyle.Kenney_panel_style("grey"))
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 10)
 	add_child(vbox)
@@ -27,7 +27,7 @@ func _ready() -> void:
 	_title = UiStyle.label("", 22, UiStyle.INK)
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)
-	var close_btn := UiStyle.make_button("Close", Color("B9AC97"))
+	var close_btn := UiStyle.make_Kenney_icon_button("res://assets/sprites/game_icons/lorc_cross-mark.svg", "Close", "red", 12)
 	close_btn.pressed.connect(func() -> void: visible = false)
 	head.add_child(close_btn)
 	_scroll = ScrollContainer.new()
@@ -85,6 +85,17 @@ func show_crafting() -> void:
 		var hbox := HBoxContainer.new()
 		hbox.add_theme_constant_override("separation", 10)
 		row.add_child(hbox)
+		if known:
+			var combo := HBoxContainer.new()
+			combo.alignment = BoxContainer.ALIGNMENT_CENTER
+			combo.add_theme_constant_override("separation", 4)
+			hbox.add_child(combo)
+			for ing_i in ingredients.size():
+				if ing_i > 0:
+					combo.add_child(UiStyle.label("+", 16, UiStyle.MUTED))
+				combo.add_child(_item_icon(str(ingredients[ing_i]), 40))
+			combo.add_child(UiStyle.label(">", 16, UiStyle.ACCENT))
+			combo.add_child(_item_icon(result_id, 48))
 		var text := VBoxContainer.new()
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.add_child(text)
@@ -99,7 +110,7 @@ func show_crafting() -> void:
 		else:
 			text.add_child(UiStyle.label("Undiscovered Recipe", 15, UiStyle.MUTED))
 			text.add_child(UiStyle.label("Discover its ingredients to reveal this recipe.", 12, UiStyle.MUTED))
-		var btn := UiStyle.make_button("Craft", UiStyle.ACCENT)
+		var btn := UiStyle.make_Kenney_button("Craft", "green", 13)
 		var req: Dictionary = {}
 		for ing in ingredients:
 			req[str(ing)] = 1
@@ -128,7 +139,8 @@ func _on_craft(recipe: Dictionary, req: Dictionary) -> void:
 func show_catalog() -> void:
 	open("Collection Catalog — %d / %d discovered" % [GameStateStore.instance.discovered.size(), ItemDatabase.instance.items.size()])
 	var grid := GridContainer.new()
-	grid.columns = 4
+	var vp_width := get_viewport_rect().size.x
+	grid.columns = 2 if vp_width < 560.0 else (3 if vp_width < 860.0 else 4)
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	_content.add_child(grid)
@@ -140,8 +152,16 @@ func show_catalog() -> void:
 		var bg := UiStyle.hex(str(def.get("color", "999999"))).lightened(0.62) if found else UiStyle.CELL_LOCKED
 		cell.add_theme_stylebox_override("panel", UiStyle.panel_style(bg, 10))
 		var vbox := VBoxContainer.new()
+		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 		cell.add_child(vbox)
-		vbox.add_child(UiStyle.label(str(def.get("short", "?")) if found else "???", 16, UiStyle.INK))
+		if found:
+			var found_icon := UiStyle.icon_rect(str(def.get("icon", "")), Vector2(38, 38), Color.WHITE)
+			found_icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			vbox.add_child(found_icon)
+		else:
+			var locked_icon := UiStyle.icon_rect("res://assets/sprites/game_icons/lorc_padlock.svg", Vector2(32, 32), Color(0, 0, 0, 0.35))
+			locked_icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			vbox.add_child(locked_icon)
 		vbox.add_child(UiStyle.label(str(def.get("name", "")) if found else "Undiscovered", 10, UiStyle.INK))
 		vbox.add_child(UiStyle.label(("%s • Tier %s" % [str(def.get("category", "")), str(def.get("tier", "-"))]) if found else str(def.get("category", "")), 9, UiStyle.MUTED))
 		grid.add_child(cell)
@@ -158,13 +178,24 @@ func show_missions() -> void:
 		var row := PanelContainer.new()
 		row.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex("FFF1DE"), 12))
 		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 8)
 		row.add_child(hbox)
+		var trophy := UiStyle.icon_rect("res://assets/sprites/game_icons/delapouite_diamond-trophy.svg", Vector2(38, 38), UiStyle.hex("E8A33D"))
+		trophy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hbox.add_child(trophy)
 		var text := VBoxContainer.new()
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.add_child(text)
 		text.add_child(UiStyle.label(str(mission.get("name", mid)), 15, UiStyle.INK))
 		text.add_child(UiStyle.label("%s — %d / %d   Reward: %d coins, %d XP" % [str(mission.get("description", "")), mini(progress, target), target, int(mission.get("reward_coins", 0)), int(mission.get("reward_xp", 0))], 12, UiStyle.MUTED))
-		var btn := UiStyle.make_button("Claimed" if claimed else "Claim", UiStyle.GREEN)
+		var mission_bar := ProgressBar.new()
+		mission_bar.min_value = 0.0
+		mission_bar.max_value = float(maxi(1, target))
+		mission_bar.value = float(mini(progress, target))
+		mission_bar.custom_minimum_size = Vector2(0, 13)
+		UiStyle.style_Kenney_progress(mission_bar, "blue")
+		text.add_child(mission_bar)
+		var btn := UiStyle.make_Kenney_button("Claimed" if claimed else "Claim", "yellow", 12, true)
 		btn.disabled = claimed or progress < target
 		btn.pressed.connect(_on_claim.bind(mission))
 		hbox.add_child(btn)
@@ -213,7 +244,7 @@ func show_shop() -> void:
 			hbox.add_child(text)
 			text.add_child(UiStyle.label(str(def.get("name", item_id)), 15, UiStyle.INK))
 			text.add_child(UiStyle.label("%s • Tier %d" % [str(def.get("category", "")), int(def.get("tier", 0))], 12, UiStyle.MUTED))
-			var btn := UiStyle.make_button("Buy %d" % price, UiStyle.ACCENT)
+			var btn := UiStyle.make_Kenney_icon_button("res://assets/sprites/game_icons/lorc_crown-coin.svg", "Buy %d" % price, "blue", 12)
 			btn.disabled = GameStateStore.instance.coins < price or board == null or board.find_empty_cell() < 0
 			btn.pressed.connect(_on_buy.bind(item_id, price))
 			hbox.add_child(btn)

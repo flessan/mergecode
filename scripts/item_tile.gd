@@ -10,6 +10,8 @@ signal tile_clicked(tile: ItemTile)
 
 var item_id: String = ""
 var cell_index: int = -1
+var _name_label: Label
+var _pips: HBoxContainer
 
 func setup(p_item_id: String, p_cell: int) -> void:
 	item_id = p_item_id
@@ -52,18 +54,18 @@ func _build() -> void:
 	icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(icon)
-	var name_label := UiStyle.label(str(def.get("name", item_id)), 9, Color.WHITE)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.mouse_filter = MOUSE_FILTER_IGNORE
-	name_label.clip_text = true
-	vbox.add_child(name_label)
+	_name_label = UiStyle.label(str(def.get("name", item_id)), 9, Color.WHITE)
+	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_name_label.mouse_filter = MOUSE_FILTER_IGNORE
+	_name_label.clip_text = true
+	vbox.add_child(_name_label)
 	# Tier pips: one gold dot per tier (crafted items get a single star dot).
 	var tier := int(def.get("tier", 0))
-	var pips := HBoxContainer.new()
-	pips.alignment = BoxContainer.ALIGNMENT_CENTER
-	pips.add_theme_constant_override("separation", 2)
-	pips.mouse_filter = MOUSE_FILTER_IGNORE
-	vbox.add_child(pips)
+	_pips = HBoxContainer.new()
+	_pips.alignment = BoxContainer.ALIGNMENT_CENTER
+	_pips.add_theme_constant_override("separation", 2)
+	_pips.mouse_filter = MOUSE_FILTER_IGNORE
+	vbox.add_child(_pips)
 	var pip_count := tier if tier > 0 else 1
 	for i in mini(pip_count, 8):
 		var dot := PanelContainer.new()
@@ -73,7 +75,16 @@ func _build() -> void:
 		ds.set_corner_radius_all(3)
 		dot.add_theme_stylebox_override("panel", ds)
 		dot.mouse_filter = MOUSE_FILTER_IGNORE
-		pips.add_child(dot)
+		_pips.add_child(dot)
+
+
+func set_compact(compact: bool) -> void:
+	# On small cells the illustration stays dominant; tier/name details are
+	# still available through the selection bar and tooltip.
+	if _name_label:
+		_name_label.visible = not compact
+	if _pips:
+		_pips.visible = not compact
 
 func set_highlight(active: bool, ok: bool) -> void:
 	add_theme_stylebox_override("panel", _tile_style(active, ok))
@@ -121,5 +132,6 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_DRAG_END:
 		modulate = Color.WHITE
-		if get_parent() and get_parent().has_method("clear_highlights"):
-			get_parent().clear_highlights()
+		var cell := get_parent()
+		if cell and cell.get_parent() and cell.get_parent().has_method("clear_highlights"):
+			cell.get_parent().clear_highlights()

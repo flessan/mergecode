@@ -15,6 +15,8 @@ var cells_items: Dictionary = {}   # int cell -> String item_id
 var _cells: Array = []              # BoardCell nodes by index
 var _tiles: Dictionary = {}         # int cell -> ItemTile
 var _highlighted_cell: int = -1
+var _selected_cell: int = -1
+var _cell_px: int = 92
 
 func _ready() -> void:
 	columns = COLUMNS
@@ -39,6 +41,37 @@ func refresh_locks() -> void:
 		# Fully locked rows stay hidden until expansion reveals them, so the
 		# board always fits its surface without shrinking cells to nothing.
 		_cells[i].visible = i < shown
+
+func set_cell_size(px: int) -> void:
+	_cell_px = px
+	for cell in _cells:
+		cell.set_cell_size(px)
+	for c in _tiles:
+		_tiles[c].set_compact(px < 64)
+
+# --- Selection (Board owns it: Board owns the tile instances) ----------------
+
+func selected_cell() -> int:
+	return _selected_cell
+
+func set_selected_cell(cell: int) -> void:
+	_selected_cell = cell
+	for c in _tiles:
+		_tiles[c].set_selected(int(c) == cell)
+
+func spawn_burst(cell: int) -> void:
+	if cell < 0 or cell >= _cells.size():
+		return
+	var burst := UiStyle.icon_rect("res://assets/sprites/effects/starburst.svg", Vector2(30, 30), Color.WHITE)
+	burst.set_anchors_preset(Control.PRESET_CENTER)
+	_cells[cell].add_child(burst)
+	burst.scale = Vector2(0.3, 0.3)
+	burst.pivot_offset = Vector2(15, 15)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(burst, "scale", Vector2(2.6, 2.6), 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(burst, "modulate:a", 0.0, 0.5)
+	tween.chain().tween_callback(burst.queue_free)
 
 # --- Queries ---------------------------------------------------------------
 
@@ -81,6 +114,8 @@ func place_item(item_id: String, cell: int = -1, animate: bool = true) -> bool:
 func remove_at(cell: int) -> void:
 	if not cells_items.has(cell):
 		return
+	if cell == _selected_cell:
+		_selected_cell = -1
 	cells_items.erase(cell)
 	if _tiles.has(cell):
 		_tiles[cell].queue_free()
@@ -108,6 +143,7 @@ func _spawn_tile(cell: int, animate: bool) -> void:
 	tile.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_cells[cell].add_child(tile)
 	_tiles[cell] = tile
+	tile.set_compact(_cell_px < 64)
 	tile.tile_clicked.connect(_on_tile_clicked)
 	if animate:
 		tile.pop_animation()
@@ -146,6 +182,8 @@ func drop_on_cell(from_cell: int, to_cell: int) -> void:
 		cells_items[to_cell] = from_id
 		_rebuild_tile(from_cell)
 		_spawn_tile(to_cell, false)
+		if _selected_cell == from_cell:
+			set_selected_cell(to_cell)
 		SoundFx.instance.play("click")
 		board_changed.emit()
 		return
@@ -167,6 +205,9 @@ func drop_on_cell(from_cell: int, to_cell: int) -> void:
 		GameStateStore.instance.add_xp(2 + int(ItemDatabase.instance.get_item(next_id).get("tier", 1)))
 		SoundFx.instance.play("merge")
 		merge_performed.emit(to_cell, next_id)
+		spawn_burst(to_cell)
+		if _selected_cell == from_cell or _selected_cell == to_cell:
+			set_selected_cell(to_cell)
 		_float_text(to_cell, "Merged!")
 		board_changed.emit()
 	else:
@@ -177,6 +218,10 @@ func drop_on_cell(from_cell: int, to_cell: int) -> void:
 		_rebuild_tile(to_cell)
 		_spawn_tile(from_cell, false)
 		_spawn_tile(to_cell, false)
+		if _selected_cell == from_cell:
+			set_selected_cell(to_cell)
+		elif _selected_cell == to_cell:
+			set_selected_cell(from_cell)
 		SoundFx.instance.play("click")
 		board_changed.emit()
 

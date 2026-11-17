@@ -2,6 +2,17 @@
 
 All artwork is stored locally in this repository; the game needs no internet connection at runtime.
 
+## Downloaded artwork — Kenney UI Pack (CC0)
+
+- **Asset:** UI Pack by Kenney Vleugels — approximately 430 interface elements in the complete pack; this project integrates a curated 82-PNG subset needed for its buttons, panels, progress bars, and board slots.
+- **Official source:** https://kenney.nl/assets/ui-pack
+- **Download mirror used by this workspace:** https://github.com/ereborstudios/kenney-ui-pack (the repository redistributes Kenney's UI Pack and includes Kenney's original `license.txt`; the downloaded pack itself is unchanged apart from selecting the subset used here).
+- **Creator/publisher:** Kenney Vleugels / Kenney (www.kenney.nl)
+- **License:** Creative Commons CC0 — http://creativecommons.org/publicdomain/zero/1.0/
+- **Attribution requirement:** Credit is appreciated but not mandatory under CC0. This credit is retained voluntarily, and Kenney's original license file is preserved at `assets/ui/Kenney/license.txt`.
+- **Local files:** `assets/ui/Kenney/*.png` (blue, green, red, yellow, and grey buttons/panels/circles/sliders/status marks) plus `assets/ui/Kenney/license.txt`.
+- **Used for:** nine-sliced game buttons throughout the HUD, menus, generator dock, customer orders, and popups; shared grey panels; XP, generator-energy, and mission progress bars; warm board-slot styling.
+
 ## Downloaded artwork — Game-Icons (CC BY 3.0)
 
 - **Source:** https://game-icons.net — files fetched from the official GitHub mirror `game-icons/icons` (https://github.com/game-icons/icons)
