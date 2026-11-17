@@ -45,6 +45,8 @@ func _build() -> void:
 	head.add_theme_constant_override("separation", 5)
 	vbox.add_child(head)
 	_name_label = UiStyle.label("", 12, UiStyle.INK)
+	_name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_name_label.clip_text = true
 	head.add_child(_name_label)
 	head.add_child(UiStyle.icon_rect(COIN_ICON, Vector2(13, 13), UiStyle.hex("E8A33D")))
 	_reward_label = UiStyle.label("", 11, UiStyle.INK)

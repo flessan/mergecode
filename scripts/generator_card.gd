@@ -47,6 +47,7 @@ func _build() -> void:
 	body.add_child(_machine)
 	_title_label = UiStyle.label(str(def.get("name", generator_id)), 12, UiStyle.INK)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_title_label.clip_text = true
 	body.add_child(_title_label)
 	var energy_head := HBoxContainer.new()

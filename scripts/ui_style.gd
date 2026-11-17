@@ -88,10 +88,58 @@ static func make_Kenney_button(text: String, color_name: String = "blue", font_s
 	_Kenney_button_styles(b, color_name)
 	return b
 
+## Icon buttons are COMPOSITED, never Button.icon: the item/customer SVGs
+## rasterise large (512px viewBox), and Button.icon forces the button's
+## minimum size to the texture size - one 512px icon once made every nav,
+## HUD, Deliver and Close button >=512px and crushed the whole layout.
+## A TextureRect child at a fixed pixel size cannot affect minimum size.
+static func _attach_button_icon(b: Button, icon_path: String, px: int = 18) -> TextureRect:
+	var t := TextureRect.new()
+	t.name = "BtnIcon"
+	t.texture = load_tex(icon_path)
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	t.modulate = b.get_theme_color("font_color")
+	b.add_child(t)
+	b.set_meta("btn_icon", t)
+	b.set_meta("btn_icon_px", px)
+	_position_button_icon(b, b.text == "")
+	return t
+
+static func _position_button_icon(b: Button, icon_only: bool) -> void:
+	if not b.has_meta("btn_icon"):
+		return
+	var t: TextureRect = b.get_meta("btn_icon")
+	var px: int = int(b.get_meta("btn_icon_px", 18))
+	if icon_only:
+		# Centred square icon, no text padding.
+		t.set_anchors_preset(Control.PRESET_CENTER)
+		t.offset_left = -px * 0.5
+		t.offset_right = px * 0.5
+		t.offset_top = -px * 0.5
+		t.offset_bottom = px * 0.5
+		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			if b.has_theme_stylebox_override(state):
+				b.get_theme_stylebox(state).set_content_margin(SIDE_LEFT, 7.0)
+	else:
+		t.set_anchors_preset(Control.PRESET_CENTER_LEFT)
+		t.offset_left = 7.0
+		t.offset_right = 7.0 + px
+		t.offset_top = -px * 0.5
+		t.offset_bottom = px * 0.5
+		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			if b.has_theme_stylebox_override(state):
+				b.get_theme_stylebox(state).set_content_margin(SIDE_LEFT, px + 12.0)
+
+## Switch a composited icon button between labelled and icon-only modes
+## (responsive nav/HUD). Text is set by the caller before calling this.
+static func set_button_icon_only(b: Button, icon_only: bool) -> void:
+	_position_button_icon(b, icon_only)
+
 static func make_Kenney_icon_button(icon_path: String, text: String, color_name: String = "blue", font_size: int = 14, dark_text: bool = false) -> Button:
 	var b := make_Kenney_button(text, color_name, font_size, dark_text)
-	b.icon = load_tex(icon_path)
-	b.expand_icon = false
+	_attach_button_icon(b, icon_path, 16 if text == "" else 18)
 	return b
 
 static func style_Kenney_progress(bar: ProgressBar, fill_color_name: String = "blue") -> void:
@@ -137,12 +185,11 @@ static func icon_rect(path: String, min_size: Vector2, tint: Color = Color.WHITE
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return t
 
-## Button with a leading icon (TextureButton can't show text, so this is a
-## regular Button using its built-in icon support).
+## Button with a leading icon (composited child; see _attach_button_icon
+## for why Button.icon is never used with these textures).
 static func make_icon_button(icon_path: String, text: String, bg: Color = ACCENT, font_size: int = 14) -> Button:
 	var b := make_button(text, bg, font_size)
-	b.icon = load_tex(icon_path)
-	b.expand_icon = false
+	_attach_button_icon(b, icon_path, 16 if text == "" else 18)
 	return b
 
 static func chip(text: String, bg: Color) -> PanelContainer:

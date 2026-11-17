@@ -18,7 +18,7 @@ All artwork is stored locally in this repository; the game needs no internet con
 - **Source:** https://game-icons.net — files fetched from the official GitHub mirror `game-icons/icons` (https://github.com/game-icons/icons)
 - **Creators:** Lorc, Delapouite and other game-icons.net contributors (per-file author is the filename prefix, e.g. `lorc_*.svg`, `delapouite_*.svg`)
 - **License:** Creative Commons Attribution 3.0 (CC BY 3.0) — https://creativecommons.org/licenses/by/3.0/
-- **Processing:** the files as downloaded contain a baked-in black background square; the copies in this repo have that background path removed so the white silhouettes can be tinted/rendered over the game's coloured tiles (a recolouring the licence permits).
+- **Processing:** the files as downloaded contain a baked-in black background square; the copies in this repo have that background path removed so the white silhouettes can be tinted/rendered over the game's coloured tiles (a recolouring the licence permits). They also carry an explicit `width="128" height="128"` (the downloads have only a 512 viewBox, which made Godot rasterise every icon at 512x512 and - via `Button.icon` minimum sizes - once blew up every icon button in the UI; buttons now composite a fixed-size icon child instead, see `scripts/ui_style.gd`).
 - **Attribution requirement:** credit to game-icons.net is required; this file and the in-game Catalog/Help credits satisfy it. Icons may be recoloured (the game renders the black silhouettes tinted over coloured tiles).
 - **Used for:** item illustrations (every item in `data/items.json` references one via its `icon` field), and interface icons (coin, energy, shop, crafting, catalog, missions, settings, check, lock, gift, close).
 

@@ -125,6 +125,7 @@ func _build_hud(root: VBoxContainer) -> void:
 	bar.add_theme_constant_override("separation", 8)
 	panel.add_child(bar)
 	_hud_title = UiStyle.label("Merge Code", 17, UiStyle.ACCENT)
+	_hud_title.autowrap_mode = TextServer.AUTOWRAP_OFF  # never crush to 1-char columns
 	bar.add_child(_hud_title)
 	var coin_chip := PanelContainer.new()
 	coin_chip.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex("FFF1DE"), 11))
@@ -133,6 +134,7 @@ func _build_hud(root: VBoxContainer) -> void:
 	coin_chip.add_child(coin_row)
 	coin_row.add_child(UiStyle.icon_rect(COIN_ICON, Vector2(18, 18), UiStyle.hex("E8A33D")))
 	_coins_label = UiStyle.label("0", 16, UiStyle.INK)
+	_coins_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	coin_row.add_child(_coins_label)
 	bar.add_child(coin_chip)
 	var level_chip := PanelContainer.new()
@@ -142,6 +144,7 @@ func _build_hud(root: VBoxContainer) -> void:
 	level_chip.add_child(level_row)
 	level_row.add_child(UiStyle.icon_rect(STAR_ICON, Vector2(16, 16), UiStyle.hex("E8A33D")))
 	_level_label = UiStyle.label("Lv 1", 14, UiStyle.INK)
+	_level_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	level_row.add_child(_level_label)
 	_xp_bar = ProgressBar.new()
 	_xp_bar.custom_minimum_size = Vector2(90, 13)
@@ -408,6 +411,7 @@ func _apply_layout() -> void:
 		_gen_hint.visible = vp.x >= 900.0
 	if _sound_btn:
 		_sound_btn.text = "" if compact else ("Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off")
+		UiStyle.set_button_icon_only(_sound_btn, compact)
 	if _menu_btn:
 		_menu_btn.text = "Menu" if compact else "Main Menu"
 	_xp_bar.custom_minimum_size = Vector2(52, 13) if compact else Vector2(90, 13)
@@ -417,6 +421,7 @@ func _apply_layout() -> void:
 	for entry in _nav_buttons:
 		var b: Button = entry["button"]
 		b.text = "" if icon_only else str(entry["name"])
+		UiStyle.set_button_icon_only(b, icon_only)
 
 func _apply_mode(mode: int) -> void:
 	# Generator dock placement + scroll direction per mode.
