@@ -3,7 +3,7 @@
 ; since the parameters that go here are not all obvious.
 ;
 ; Format:
-;   [section] ; section goes between []
+;   [section] ; section goes between [].
 ;   param=value ; assign values to parameters
 
 config_version=5
@@ -11,13 +11,25 @@ config_version=5
 [application]
 
 config/name="Merge Code"
+config/description="A 2D merge-management game about building a software ecosystem: generate tech items, merge them, craft products, and fulfil customer orders."
+run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[autoload]
+
+ItemDB="*res://scripts/autoload/item_database.gd"
+GameState="*res://scripts/autoload/game_state.gd"
+SaveManager="*res://scripts/autoload/save_manager.gd"
+SoundManager="*res://scripts/autoload/sound_manager.gd"
+
 [display]
 
+window/size/viewport_width=1280
+window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation="sensor"
 
 [physics]
 
@@ -25,6 +37,8 @@ window/stretch/aspect="expand"
 
 [rendering]
 
-rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+rendering_device/driver.windows="d3d12"
+textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(1, 0.964706, 0.92549, 1)
