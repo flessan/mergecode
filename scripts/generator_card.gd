@@ -21,7 +21,7 @@ func setup(p_id: String) -> void:
 	refresh()
 
 func _build() -> void:
-	var def := ItemDatabase.instance.generators[generator_id]
+	var def: Dictionary = ItemDatabase.instance.generators[generator_id]
 	add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.PANEL, 14))
 	_body = VBoxContainer.new()
 	_body.add_theme_constant_override("separation", 6)
@@ -46,7 +46,7 @@ func _build() -> void:
 	_body.add_child(_unlock_btn)
 
 func refresh() -> void:
-	var def := ItemDatabase.instance.generators[generator_id]
+	var def: Dictionary = ItemDatabase.instance.generators[generator_id]
 	var state := GameStateStore.instance.generator_state(generator_id)
 	var unlocked := bool(state.get("unlocked", false))
 	var lvl := int(state.get("level", 1))
@@ -70,7 +70,7 @@ func refresh() -> void:
 		_unlock_btn.disabled = GameStateStore.instance.level < int(def.get("unlock_level", 1)) or GameStateStore.instance.coins < int(def.get("unlock_cost", 0))
 
 func _on_unlock() -> void:
-	var def := ItemDatabase.instance.generators[generator_id]
+	var def: Dictionary = ItemDatabase.instance.generators[generator_id]
 	if GameStateStore.instance.level < int(def.get("unlock_level", 1)):
 		SoundFx.instance.play("error")
 		return
