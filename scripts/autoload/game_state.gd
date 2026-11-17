@@ -1,4 +1,14 @@
 extends Node
+class_name GameStateStore
+## NOTE: this script is also registered as an autoload in project.godot, which
+## instantiates it. Gameplay code accesses it via GameStateStore.instance (set in
+## _enter_tree) instead of the autoload singleton name, so identifier
+## resolution never depends on editor autoload-registration timing.
+
+static var instance: GameStateStore
+
+func _enter_tree() -> void:
+	instance = self
 ## Central single-player state: economy, progression, discovery, statistics,
 ## generator states and customer orders. Emits signals; UI listens, never polls
 ## for currency changes. Serialised by SaveManager through to_dict/from_dict.
@@ -54,8 +64,8 @@ func reset_new_game(emit_signals_now: bool = true) -> void:
 	claimed_missions.clear()
 	board_cells_unlocked = BOARD_START_CELLS
 	generator_states.clear()
-	for gen_id in ItemDB.generator_order:
-		var def: Dictionary = ItemDB.generators[gen_id]
+	for gen_id in ItemDatabase.instance.generator_order:
+		var def: Dictionary = ItemDatabase.instance.generators[gen_id]
 		var starts_open := int(def.get("unlock_level", 1)) <= 1 and int(def.get("unlock_cost", 0)) <= 0
 		generator_states[gen_id] = {
 			"unlocked": starts_open, "level": 1,
@@ -128,17 +138,17 @@ func generator_state(gen_id: String) -> Dictionary:
 	return generator_states.get(gen_id, {"unlocked": false, "level": 1, "energy": 0.0})
 
 func generator_max_energy(gen_id: String) -> int:
-	var def: Dictionary = ItemDB.generators.get(gen_id, {})
+	var def: Dictionary = ItemDatabase.instance.generators.get(gen_id, {})
 	var lvl := int(generator_state(gen_id).get("level", 1))
 	return int(def.get("max_energy", 6)) + (lvl - 1)
 
 func generator_regen_seconds(gen_id: String) -> float:
-	var def: Dictionary = ItemDB.generators.get(gen_id, {})
+	var def: Dictionary = ItemDatabase.instance.generators.get(gen_id, {})
 	var lvl := int(generator_state(gen_id).get("level", 1))
 	return maxf(1.5, float(def.get("regen_seconds", 4.0)) - float(lvl - 1) * 0.25)
 
 func generator_upgrade_cost(gen_id: String) -> int:
-	var def: Dictionary = ItemDB.generators.get(gen_id, {})
+	var def: Dictionary = ItemDatabase.instance.generators.get(gen_id, {})
 	var lvl := int(generator_state(gen_id).get("level", 1))
 	return int(def.get("base_upgrade_cost", 100)) * lvl
 
@@ -156,12 +166,12 @@ func board_expansion_cost() -> int:
 # --- Orders ------------------------------------------------------------------
 
 func make_order() -> Dictionary:
-	var customer := ItemDB.random_customer()
+	var customer := ItemDatabase.instance.random_customer()
 	# Candidate items: discovered chain items of tier 1..(2+level), so orders
 	# stay achievable; fall back to starter items on a fresh game.
 	var candidates: Array = []
 	for item_id in discovered.keys():
-		var def := ItemDB.get_item(str(item_id))
+		var def := ItemDatabase.instance.get_item(str(item_id))
 		if str(def.get("chain_id", "")) != "crafted" and int(def.get("tier", 0)) >= 1:
 			candidates.append(str(item_id))
 	if candidates.is_empty():
@@ -178,7 +188,7 @@ func make_order() -> Dictionary:
 	for i in req_count:
 		var pick := str(candidates[randi() % candidates.size()])
 		requirements[pick] = int(requirements.get(pick, 0)) + 1
-		var def := ItemDB.get_item(pick)
+		var def := ItemDatabase.instance.get_item(pick)
 		reward_coins += int(def.get("sell_value", 5)) * 3 + 8
 		reward_xp += 6 + int(def.get("tier", 1)) * 4
 	return {
@@ -233,12 +243,12 @@ func from_dict(data: Dictionary) -> void:
 	board_cells_unlocked = clampi(int(data.get("board_cells_unlocked", BOARD_START_CELLS)), BOARD_START_CELLS, BOARD_MAX_CELLS)
 	generator_states.clear()
 	var saved_gens: Dictionary = data.get("generator_states", {})
-	for gen_id in ItemDB.generator_order:
+	for gen_id in ItemDatabase.instance.generator_order:
 		if saved_gens.has(gen_id) and typeof(saved_gens[gen_id]) == TYPE_DICTIONARY:
 			var s: Dictionary = saved_gens[gen_id]
 			generator_states[gen_id] = {"unlocked": bool(s.get("unlocked", false)), "level": maxi(1, int(s.get("level", 1))), "energy": float(s.get("energy", 0.0))}
 		else:  # graceful fallback for saves missing newer generators
-			var def: Dictionary = ItemDB.generators[gen_id]
+			var def: Dictionary = ItemDatabase.instance.generators[gen_id]
 			generator_states[gen_id] = {"unlocked": int(def.get("unlock_level", 1)) <= 1 and int(def.get("unlock_cost", 0)) <= 0, "level": 1, "energy": float(def.get("max_energy", 6))}
 	orders.clear()
 	for entry in data.get("saved_orders", data.get("orders", [])):

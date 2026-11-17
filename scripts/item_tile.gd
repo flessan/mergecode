@@ -26,7 +26,7 @@ func setup(p_item_id: String, p_cell: int) -> void:
 	_build()
 
 func _build() -> void:
-	var def := ItemDB.get_item(item_id)
+	var def := ItemDatabase.instance.get_item(item_id)
 	var color := UiStyle.hex(str(def.get("color", "4A90D9")))
 	var style := UiStyle.panel_style(color.lightened(0.62), 12, rarity_frame(str(def.get("rarity", "Common"))))
 	add_theme_stylebox_override("panel", style)
@@ -51,7 +51,7 @@ func _build() -> void:
 	vbox.add_child(_tier_label)
 
 func set_highlight(active: bool, ok: bool) -> void:
-	var def := ItemDB.get_item(item_id)
+	var def := ItemDatabase.instance.get_item(item_id)
 	var color := UiStyle.hex(str(def.get("color", "4A90D9")))
 	var border := UiStyle.GREEN if ok else UiStyle.RED
 	var style := UiStyle.panel_style(color.lightened(0.45 if active else 0.62), 12, border if active else rarity_frame(str(def.get("rarity", "Common"))))
@@ -69,7 +69,7 @@ func _gui_input(event: InputEvent) -> void:
 		tile_clicked.emit(self)
 
 func _get_drag_data(_at_position: Vector2) -> Variant:
-	var def := ItemDB.get_item(item_id)
+	var def := ItemDatabase.instance.get_item(item_id)
 	var preview := PanelContainer.new()
 	preview.custom_minimum_size = Vector2(76, 76)
 	preview.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex(str(def.get("color", "4A90D9"))).lightened(0.4), 12))

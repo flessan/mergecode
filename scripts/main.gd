@@ -4,7 +4,7 @@ extends Control
 ## right customer orders, plus modal panels, toasts and autosave.
 
 var board: Board
-var popup: PopupPanel
+var popup: MergePopupPanel
 var _dim: ColorRect
 var _coins_label: Label
 var _level_label: Label
@@ -27,11 +27,11 @@ func _ready() -> void:
 	_connect_signals()
 	# Load existing save (chosen in the main menu) or start a fresh workshop.
 	var saved_board: Array = []
-	if SaveManager.load_existing and GameState.has_save:
-		saved_board = SaveManager.load_game()
+	if SaveGame.instance.load_existing and GameStateStore.instance.has_save:
+		saved_board = SaveGame.instance.load_game()
 		board.load_items(saved_board)
 	else:
-		GameState.reset_new_game()
+		GameStateStore.instance.reset_new_game()
 		board.refresh_locks()
 		board.place_item("language_1", -1, false)
 		board.place_item("language_1", -1, false)
@@ -96,10 +96,10 @@ func _build_hud(root: VBoxContainer) -> void:
 		var b := UiStyle.make_button(str(entry[0]), UiStyle.ACCENT)
 		b.pressed.connect(_open_popup.bind(str(entry[1])))
 		bar.add_child(b)
-	var sound_btn := UiStyle.make_button("Sound: On" if GameState.sound_enabled else "Sound: Off", Color("B9AC97"))
+	var sound_btn := UiStyle.make_button("Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off", Color("B9AC97"))
 	sound_btn.pressed.connect(func() -> void:
-		GameState.sound_enabled = not GameState.sound_enabled
-		sound_btn.text = "Sound: On" if GameState.sound_enabled else "Sound: Off"
+		GameStateStore.instance.sound_enabled = not GameStateStore.instance.sound_enabled
+		sound_btn.text = "Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off"
 		_mark_dirty())
 	bar.add_child(sound_btn)
 	var menu_btn := UiStyle.make_button("Main Menu", Color("B9AC97"))
@@ -127,7 +127,7 @@ func _build_generators(body: HBoxContainer) -> void:
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 8)
 	scroll.add_child(list)
-	for gen_id in ItemDB.generator_order:
+	for gen_id in ItemDatabase.instance.generator_order:
 		var card := GeneratorCard.new()
 		list.add_child(card)
 		card.setup(str(gen_id))
@@ -182,14 +182,14 @@ func _build_orders(body: HBoxContainer) -> void:
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 8)
 	scroll.add_child(list)
-	for i in GameState.MAX_ORDERS:
+	for i in GameStateStore.instance.MAX_ORDERS:
 		var card := OrderCard.new()
 		list.add_child(card)
 		card.setup(i)
 		card.deliver_requested.connect(_on_deliver)
 		card.dismiss_requested.connect(func(index: int) -> void:
-			GameState.replace_order(index)
-			SoundManager.play("click")
+			GameStateStore.instance.replace_order(index)
+			SoundFx.instance.play("click")
 			_mark_dirty()
 			_refresh_orders())
 		_order_cards.append(card)
@@ -200,7 +200,7 @@ func _build_overlay() -> void:
 	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_dim.visible = false
 	add_child(_dim)
-	popup = PopupPanel.new()
+	popup = MergePopupPanel.new()
 	popup.board = board
 	popup.set_anchors_preset(Control.PRESET_CENTER)
 	popup.custom_minimum_size = Vector2(620, 520)
@@ -213,21 +213,21 @@ func _build_overlay() -> void:
 	add_child(_toast)
 
 func _connect_signals() -> void:
-	GameState.coins_changed.connect(func(amount: int) -> void: _coins_label.text = "Coins: %d" % amount)
-	GameState.xp_changed.connect(func(xp: int, needed: int, lvl: int) -> void:
+	GameStateStore.instance.coins_changed.connect(func(amount: int) -> void: _coins_label.text = "Coins: %d" % amount)
+	GameStateStore.instance.xp_changed.connect(func(xp: int, needed: int, lvl: int) -> void:
 		_level_label.text = "Level %d" % lvl
 		_xp_bar.max_value = needed
 		_xp_bar.value = xp)
-	GameState.leveled_up.connect(func(lvl: int) -> void:
-		SoundManager.play("levelup")
+	GameStateStore.instance.leveled_up.connect(func(lvl: int) -> void:
+		SoundFx.instance.play("levelup")
 		_show_toast("Level %d reached! Bonus coins awarded and new content may be unlocked." % lvl)
 		_refresh_all())
-	GameState.orders_changed.connect(_refresh_orders)
+	GameStateStore.instance.orders_changed.connect(_refresh_orders)
 	board.board_changed.connect(func() -> void: _mark_dirty(); _refresh_orders(); _refresh_expand())
 	board.item_selected.connect(_on_item_selected)
 	board.invalid_action.connect(_show_toast)
 	board.merge_performed.connect(func(_cell: int, new_item_id: String) -> void:
-		_show_toast("Merged into %s!" % ItemDB.item_name(new_item_id)))
+		_show_toast("Merged into %s!" % ItemDatabase.instance.item_name(new_item_id)))
 
 func _process(delta: float) -> void:
 	_dim.visible = popup.visible
@@ -235,12 +235,12 @@ func _process(delta: float) -> void:
 	if _regen_accum >= 0.25:
 		var step := _regen_accum
 		_regen_accum = 0.0
-		for gen_id in ItemDB.generator_order:
-			var state := GameState.generator_state(str(gen_id))
+		for gen_id in ItemDatabase.instance.generator_order:
+			var state := GameStateStore.instance.generator_state(str(gen_id))
 			if bool(state.get("unlocked", false)):
-				var max_energy := float(GameState.generator_max_energy(str(gen_id)))
-				state["energy"] = minf(max_energy, float(state.get("energy", 0.0)) + step / GameState.generator_regen_seconds(str(gen_id)))
-				GameState.generator_states[str(gen_id)] = state
+				var max_energy := float(GameStateStore.instance.generator_max_energy(str(gen_id)))
+				state["energy"] = minf(max_energy, float(state.get("energy", 0.0)) + step / GameStateStore.instance.generator_regen_seconds(str(gen_id)))
+				GameStateStore.instance.generator_states[str(gen_id)] = state
 	_ui_accum += delta
 	if _ui_accum >= 0.5:
 		_ui_accum = 0.0
@@ -248,51 +248,51 @@ func _process(delta: float) -> void:
 			_gen_cards[gen_id].refresh()
 
 func _on_produce(gen_id: String) -> void:
-	var state := GameState.generator_state(gen_id)
+	var state := GameStateStore.instance.generator_state(gen_id)
 	if not bool(state.get("unlocked", false)):
 		return
 	if float(state.get("energy", 0.0)) < 1.0:
 		_show_toast("Generator is recharging — energy refills over time.")
-		SoundManager.play("error")
+		SoundFx.instance.play("error")
 		return
 	if board.find_empty_cell() < 0:
 		_show_toast("Board is full! Merge, sell or deliver items, or expand the board.")
-		SoundManager.play("error")
+		SoundFx.instance.play("error")
 		return
-	var def: Dictionary = ItemDB.generators[gen_id]
-	var ids: Array = ItemDB.chains.get(str(def.get("chain_id", "")), [])
+	var def: Dictionary = ItemDatabase.instance.generators[gen_id]
+	var ids: Array = ItemDatabase.instance.chains.get(str(def.get("chain_id", "")), [])
 	if ids.is_empty():
 		return
 	var item_id := str(ids[0])
-	if ids.size() > 1 and randf() < GameState.generator_bonus_chance(gen_id):
+	if ids.size() > 1 and randf() < GameStateStore.instance.generator_bonus_chance(gen_id):
 		item_id = str(ids[1])
 	state["energy"] = float(state.get("energy", 0.0)) - 1.0
-	GameState.generator_states[gen_id] = state
+	GameStateStore.instance.generator_states[gen_id] = state
 	if board.place_item(item_id):
-		GameState.bump_stat("generated")
-		SoundManager.play("generate")
+		GameStateStore.instance.bump_stat("generated")
+		SoundFx.instance.play("generate")
 		_mark_dirty()
 	_gen_cards[gen_id].refresh()
 
 func _on_deliver(index: int) -> void:
-	if index < 0 or index >= GameState.orders.size():
+	if index < 0 or index >= GameStateStore.instance.orders.size():
 		return
-	var order: Dictionary = GameState.orders[index]
+	var order: Dictionary = GameStateStore.instance.orders[index]
 	if not board.has_requirements(order.get("requirements", {})):
 		_show_toast("You don't have all the requested items yet.")
-		SoundManager.play("error")
+		SoundFx.instance.play("error")
 		return
 	board.consume_requirements(order.get("requirements", {}))
-	GameState.complete_order(index)  # pays rewards and issues a fresh order
-	SoundManager.play("coin")
+	GameStateStore.instance.complete_order(index)  # pays rewards and issues a fresh order
+	SoundFx.instance.play("coin")
 	_show_toast("Order delivered! +%d coins, +%d XP" % [int(order.get("reward_coins", 0)), int(order.get("reward_xp", 0))])
 	_mark_dirty()
 	_refresh_all()
 
 func _on_item_selected(tile: ItemTile) -> void:
 	_selected_cell = tile.cell_index
-	var def := ItemDB.get_item(tile.item_id)
-	SoundManager.play("click")
+	var def := ItemDatabase.instance.get_item(tile.item_id)
+	SoundFx.instance.play("click")
 	_selected_title.text = "%s  •  %s  •  Tier %s  •  %s" % [str(def.get("name", tile.item_id)), str(def.get("category", "")), str(def.get("tier", "-")), str(def.get("rarity", ""))]
 	var extra := ""
 	if str(def.get("source_url", "")) != "":
@@ -308,12 +308,12 @@ func _on_sell_selected() -> void:
 	if _selected_cell < 0 or not board.cells_items.has(_selected_cell):
 		return
 	var item_id := str(board.cells_items[_selected_cell])
-	var value := int(ItemDB.get_item(item_id).get("sell_value", 0))
+	var value := int(ItemDatabase.instance.get_item(item_id).get("sell_value", 0))
 	board.remove_at(_selected_cell)
-	GameState.add_coins(value)
-	GameState.bump_stat("items_sold")
-	SoundManager.play("coin")
-	_show_toast("Sold %s for %d coins." % [ItemDB.item_name(item_id), value])
+	GameStateStore.instance.add_coins(value)
+	GameStateStore.instance.bump_stat("items_sold")
+	SoundFx.instance.play("coin")
+	_show_toast("Sold %s for %d coins." % [ItemDatabase.instance.item_name(item_id), value])
 	_selected_cell = -1
 	_selected_title.text = "No item selected"
 	_selected_desc.text = "Click a board item to see its description, source and sell value."
@@ -321,22 +321,22 @@ func _on_sell_selected() -> void:
 	_mark_dirty()
 
 func _on_expand_board() -> void:
-	if GameState.board_cells_unlocked >= GameState.BOARD_MAX_CELLS:
+	if GameStateStore.instance.board_cells_unlocked >= GameStateStore.instance.BOARD_MAX_CELLS:
 		return
-	var cost := GameState.board_expansion_cost()
-	if GameState.spend_coins(cost):
-		GameState.board_cells_unlocked = mini(GameState.BOARD_MAX_CELLS, GameState.board_cells_unlocked + 7)
+	var cost := GameStateStore.instance.board_expansion_cost()
+	if GameStateStore.instance.spend_coins(cost):
+		GameStateStore.instance.board_cells_unlocked = mini(GameStateStore.instance.BOARD_MAX_CELLS, GameStateStore.instance.board_cells_unlocked + 7)
 		board.refresh_locks()
-		SoundManager.play("levelup")
+		SoundFx.instance.play("levelup")
 		_show_toast("Board expanded! A new row is unlocked.")
 		_mark_dirty()
 		_refresh_expand()
 	else:
-		SoundManager.play("error")
+		SoundFx.instance.play("error")
 		_show_toast("Not enough coins to expand the board.")
 
 func _open_popup(kind: String) -> void:
-	SoundManager.play("click")
+	SoundFx.instance.play("click")
 	popup.board = board
 	match kind:
 		"craft": popup.show_crafting()
@@ -350,19 +350,19 @@ func _refresh_orders() -> void:
 		card.refresh(board)
 
 func _refresh_expand() -> void:
-	if GameState.board_cells_unlocked >= GameState.BOARD_MAX_CELLS:
+	if GameStateStore.instance.board_cells_unlocked >= GameStateStore.instance.BOARD_MAX_CELLS:
 		_expand_btn.text = "Board fully expanded"
 		_expand_btn.disabled = true
 	else:
-		var cost := GameState.board_expansion_cost()
+		var cost := GameStateStore.instance.board_expansion_cost()
 		_expand_btn.text = "Expand Board (%d)" % cost
-		_expand_btn.disabled = GameState.coins < cost
+		_expand_btn.disabled = GameStateStore.instance.coins < cost
 
 func _refresh_all() -> void:
-	_coins_label.text = "Coins: %d" % GameState.coins
-	_level_label.text = "Level %d" % GameState.level
-	_xp_bar.max_value = GameState.xp_needed_for(GameState.level)
-	_xp_bar.value = GameState.xp_into_level
+	_coins_label.text = "Coins: %d" % GameStateStore.instance.coins
+	_level_label.text = "Level %d" % GameStateStore.instance.level
+	_xp_bar.max_value = GameStateStore.instance.xp_needed_for(GameStateStore.instance.level)
+	_xp_bar.value = GameStateStore.instance.xp_into_level
 	for gen_id in _gen_cards:
 		_gen_cards[gen_id].refresh()
 	_refresh_orders()
@@ -385,7 +385,7 @@ func _mark_dirty() -> void:
 	_dirty = true
 
 func _save() -> void:
-	SaveManager.save_game(board.serialize())
+	SaveGame.instance.save_game(board.serialize())
 	_dirty = false
 
 func _notification(what: int) -> void:

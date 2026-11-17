@@ -1,6 +1,16 @@
 extends Node
+class_name SoundFx
+## NOTE: this script is also registered as an autoload in project.godot, which
+## instantiates it. Gameplay code accesses it via SoundFx.instance (set in
+## _enter_tree) instead of the autoload singleton name, so identifier
+## resolution never depends on editor autoload-registration timing.
+
+static var instance: SoundFx
+
+func _enter_tree() -> void:
+	instance = self
 ## Tiny procedural sound effects (generated WAV tones) — no audio assets needed,
-## fully offline and web-export friendly. Honours GameState.sound_enabled.
+## fully offline and web-export friendly. Honours GameStateStore.instance.sound_enabled.
 
 var _players: Array = []
 var _next := 0
@@ -28,7 +38,7 @@ func _tone(freq: float, duration: float, volume: float = 0.25) -> AudioStreamWAV
 	return stream
 
 func play(kind: String) -> void:
-	if not GameState.sound_enabled or _players.is_empty():
+	if not GameStateStore.instance.sound_enabled or _players.is_empty():
 		return
 	var freq := 440.0
 	var duration := 0.08

@@ -46,9 +46,9 @@ func _build() -> void:
 	vbox.add_child(dismiss)
 
 func refresh(board: Board) -> void:
-	if order_index < 0 or order_index >= GameState.orders.size():
+	if order_index < 0 or order_index >= GameStateStore.instance.orders.size():
 		return
-	var order: Dictionary = GameState.orders[order_index]
+	var order: Dictionary = GameStateStore.instance.orders[order_index]
 	(get_meta("name_label") as Label).text = str(order.get("customer_name", "Customer"))
 	(get_meta("role_label") as Label).text = str(order.get("customer_role", ""))
 	(get_meta("reward_label") as Label).text = "Reward: %d coins  •  %d XP" % [int(order.get("reward_coins", 0)), int(order.get("reward_xp", 0))]
@@ -65,7 +65,7 @@ func refresh(board: Board) -> void:
 	for item_id in order.get("requirements", {}):
 		var need := int(order["requirements"][item_id])
 		var have := board.item_count(str(item_id)) if board else 0
-		lines.append("%s  %d/%d" % [ItemDB.item_name(str(item_id)), mini(have, need), need])
+		lines.append("%s  %d/%d" % [ItemDatabase.instance.item_name(str(item_id)), mini(have, need), need])
 		if have < need:
 			can_fulfill = false
 	_req_label.text = "Wants:\n" + "\n".join(lines)

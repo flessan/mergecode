@@ -4,7 +4,7 @@ extends Control
 
 var _confirming_new := false
 var _new_btn: Button
-var _help: PopupPanel
+var _help: MergePopupPanel
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -29,10 +29,10 @@ func _ready() -> void:
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(subtitle)
 	var continue_btn := UiStyle.make_button("Continue", UiStyle.GREEN, 18)
-	continue_btn.disabled = not GameState.has_save
+	continue_btn.disabled = not GameStateStore.instance.has_save
 	continue_btn.pressed.connect(func() -> void:
-		SaveManager.load_existing = true
-		SoundManager.play("click")
+		SaveGame.instance.load_existing = true
+		SoundFx.instance.play("click")
 		get_tree().change_scene_to_file("res://scenes/game.tscn"))
 	vbox.add_child(continue_btn)
 	_new_btn = UiStyle.make_button("New Game", UiStyle.ACCENT, 18)
@@ -41,10 +41,10 @@ func _ready() -> void:
 	var help_btn := UiStyle.make_button("How to Play", Color("4A90D9"), 16)
 	help_btn.pressed.connect(func() -> void: _help.show_help())
 	vbox.add_child(help_btn)
-	var sound_btn := UiStyle.make_button("Sound: On" if GameState.sound_enabled else "Sound: Off", Color("B9AC97"), 16)
+	var sound_btn := UiStyle.make_button("Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off", Color("B9AC97"), 16)
 	sound_btn.pressed.connect(func() -> void:
-		GameState.sound_enabled = not GameState.sound_enabled
-		sound_btn.text = "Sound: On" if GameState.sound_enabled else "Sound: Off")
+		GameStateStore.instance.sound_enabled = not GameStateStore.instance.sound_enabled
+		sound_btn.text = "Sound: On" if GameStateStore.instance.sound_enabled else "Sound: Off")
 	vbox.add_child(sound_btn)
 	if not OS.has_feature("web"):
 		var quit_btn := UiStyle.make_button("Quit", Color("B9AC97"), 16)
@@ -53,19 +53,19 @@ func _ready() -> void:
 	var version := UiStyle.label("Single-player • Saves locally • Works offline", 11, UiStyle.MUTED)
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(version)
-	_help = PopupPanel.new()
+	_help = MergePopupPanel.new()
 	_help.set_anchors_preset(Control.PRESET_CENTER)
 	_help.custom_minimum_size = Vector2(620, 520)
 	add_child(_help)
 
 func _on_new_game() -> void:
-	if GameState.has_save and not _confirming_new:
+	if GameStateStore.instance.has_save and not _confirming_new:
 		_confirming_new = true
 		_new_btn.text = "Overwrite existing save? Click again to confirm"
-		SoundManager.play("error")
+		SoundFx.instance.play("error")
 		return
-	SaveManager.delete_save()
-	SaveManager.load_existing = false
-	GameState.reset_new_game()
-	SoundManager.play("click")
+	SaveGame.instance.delete_save()
+	SaveGame.instance.load_existing = false
+	GameStateStore.instance.reset_new_game()
+	SoundFx.instance.play("click")
 	get_tree().change_scene_to_file("res://scenes/game.tscn")

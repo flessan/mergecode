@@ -1,4 +1,14 @@
 extends Node
+class_name ItemDatabase
+## NOTE: this script is also registered as an autoload in project.godot, which
+## instantiates it. Gameplay code accesses it via ItemDatabase.instance (set in
+## _enter_tree) instead of the autoload singleton name, so identifier
+## resolution never depends on editor autoload-registration timing.
+
+static var instance: ItemDatabase
+
+func _enter_tree() -> void:
+	instance = self
 ## Loads and indexes all data-driven content from res://data/*.json.
 ## Adding content = editing JSON, no gameplay code changes needed.
 

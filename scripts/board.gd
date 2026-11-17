@@ -23,23 +23,23 @@ func _ready() -> void:
 	_build_cells()
 
 func _build_cells() -> void:
-	for i in GameState.BOARD_MAX_CELLS:
+	for i in GameStateStore.instance.BOARD_MAX_CELLS:
 		var cell := BoardCell.new()
-		cell.setup(i, self, i >= GameState.board_cells_unlocked)
+		cell.setup(i, self, i >= GameStateStore.instance.board_cells_unlocked)
 		add_child(cell)
 		_cells.append(cell)
 
 func refresh_locks() -> void:
 	for i in _cells.size():
-		_cells[i].set_locked(i >= GameState.board_cells_unlocked)
+		_cells[i].set_locked(i >= GameStateStore.instance.board_cells_unlocked)
 
 # --- Queries ---------------------------------------------------------------
 
 func is_unlocked(cell: int) -> bool:
-	return cell >= 0 and cell < GameState.board_cells_unlocked
+	return cell >= 0 and cell < GameStateStore.instance.board_cells_unlocked
 
 func find_empty_cell() -> int:
-	for i in GameState.board_cells_unlocked:
+	for i in GameStateStore.instance.board_cells_unlocked:
 		if not cells_items.has(i):
 			return i
 	return -1
@@ -66,7 +66,7 @@ func place_item(item_id: String, cell: int = -1, animate: bool = true) -> bool:
 	if target < 0:
 		return false
 	cells_items[target] = item_id
-	GameState.discover(item_id)
+	GameStateStore.instance.discover(item_id)
 	_spawn_tile(target, animate)
 	board_changed.emit()
 	return true
@@ -121,7 +121,7 @@ func preview_drop(from_cell: int, to_cell: int) -> void:
 	var from_id := str(cells_items.get(from_cell, ""))
 	var to_id := str(cells_items.get(to_cell, ""))
 	var ok := true
-	if from_id == to_id and str(ItemDB.get_item(from_id).get("merge_to", "")) == "":
+	if from_id == to_id and str(ItemDatabase.instance.get_item(from_id).get("merge_to", "")) == "":
 		ok = false  # identical but already max tier / crafted
 	_tiles[to_cell].set_highlight(true, ok)
 
@@ -138,15 +138,15 @@ func drop_on_cell(from_cell: int, to_cell: int) -> void:
 		cells_items[to_cell] = from_id
 		_rebuild_tile(from_cell)
 		_spawn_tile(to_cell, false)
-		SoundManager.play("click")
+		SoundFx.instance.play("click")
 		board_changed.emit()
 		return
 	var to_id := str(cells_items[to_cell])
 	if from_id == to_id:
-		var next_id := str(ItemDB.get_item(from_id).get("merge_to", ""))
+		var next_id := str(ItemDatabase.instance.get_item(from_id).get("merge_to", ""))
 		if next_id == "":
 			invalid_action.emit("That item is already at its highest tier.")
-			SoundManager.play("error")
+			SoundFx.instance.play("error")
 			return
 		# Merge: consume both, produce next tier at target cell.
 		cells_items.erase(from_cell)
@@ -154,10 +154,10 @@ func drop_on_cell(from_cell: int, to_cell: int) -> void:
 		cells_items[to_cell] = next_id
 		_rebuild_tile(to_cell)
 		_spawn_tile(to_cell, true)
-		GameState.discover(next_id)
-		GameState.bump_stat("merges")
-		GameState.add_xp(2 + int(ItemDB.get_item(next_id).get("tier", 1)))
-		SoundManager.play("merge")
+		GameStateStore.instance.discover(next_id)
+		GameStateStore.instance.bump_stat("merges")
+		GameStateStore.instance.add_xp(2 + int(ItemDatabase.instance.get_item(next_id).get("tier", 1)))
+		SoundFx.instance.play("merge")
 		merge_performed.emit(to_cell, next_id)
 		_float_text(to_cell, "Merged!")
 		board_changed.emit()
@@ -169,7 +169,7 @@ func drop_on_cell(from_cell: int, to_cell: int) -> void:
 		_rebuild_tile(to_cell)
 		_spawn_tile(from_cell, false)
 		_spawn_tile(to_cell, false)
-		SoundManager.play("click")
+		SoundFx.instance.play("click")
 		board_changed.emit()
 
 func _rebuild_tile(cell: int) -> void:
@@ -208,9 +208,9 @@ func load_items(saved: Array) -> void:
 			continue
 		var cell := int(entry.get("cell", -1))
 		var item_id := str(entry.get("item_id", ""))
-		if cell >= 0 and cell < GameState.BOARD_MAX_CELLS and ItemDB.items.has(item_id) and not cells_items.has(cell):
+		if cell >= 0 and cell < GameStateStore.instance.BOARD_MAX_CELLS and ItemDatabase.instance.items.has(item_id) and not cells_items.has(cell):
 			cells_items[cell] = item_id
-			GameState.discover(item_id)
+			GameStateStore.instance.discover(item_id)
 	for cell in cells_items:
 		_spawn_tile(int(cell), false)
 	refresh_locks()
