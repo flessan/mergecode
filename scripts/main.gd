@@ -23,6 +23,7 @@ var _regen_accum: float = 0.0
 var _ui_accum: float = 0.0
 
 func _ready() -> void:
+	GameBootstrap.ensure_managers(get_tree())
 	_build_ui()
 	_connect_signals()
 	# Load existing save (chosen in the main menu) or start a fresh workshop.
