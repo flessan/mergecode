@@ -12,6 +12,10 @@ Single-player, fully offline, saves locally. One shared project targets Web, Lin
 4. Deliver customer orders on the right for coins/XP; spend coins on upgrades, generators, board expansion, crafting and the shop.
 5. Progress autosaves to a local file; **Continue** resumes it.
 
+## Presentation
+
+Image-driven, board-first casual layout (not a dashboard): the merge board sits centre-screen on a workbench surface, customers wait in a top strip with original character portraits and wanted-item icons, generators are illustrated machines in an adaptive dock (vertical on wide screens, horizontal on narrow/portrait), and Crafting/Shop/Collection/Missions live in a bottom nav with viewport-sized overlays. Item artwork: white-silhouette illustrations from Game-Icons (CC BY 3.0) tinted over chain-coloured tiles with rarity frames and tier pips; customers/generators/backgrounds are original SVG artwork. Full attribution in `assets/ASSET_CREDITS.md`; regenerate originals with `python3 tools/generate_artwork.py`. Layout is container/anchor-based and rescales board cells to the actual viewport (fully-locked board rows stay hidden until expansion).
+
 ## What's implemented
 
 - Main menu (Continue / New Game with overwrite confirm / How to Play / sound / Quit)

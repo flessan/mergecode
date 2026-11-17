@@ -79,6 +79,12 @@ func chain_start_item(chain_id: String) -> String:
 	var ids: Array = chains.get(chain_id, [])
 	return str(ids[0]) if ids.size() > 0 else ""
 
+func customer_by_id(customer_id: String) -> Dictionary:
+	for c in customers:
+		if str(c.get("id", "")) == customer_id:
+			return c
+	return {}
+
 func random_customer() -> Dictionary:
 	if customers.is_empty():
 		return {"name": "Customer", "role": "Client", "color": "4A90D9", "initials": "?"}

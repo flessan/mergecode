@@ -9,7 +9,8 @@
       "unlock_cost": 0,
       "max_energy": 6,
       "regen_seconds": 4.0,
-      "base_upgrade_cost": 80
+      "base_upgrade_cost": 80,
+      "art": "res://assets/sprites/generators/code_notebook.svg"
     },
     {
       "id": "editor_studio",
@@ -20,7 +21,8 @@
       "unlock_cost": 0,
       "max_energy": 6,
       "regen_seconds": 4.0,
-      "base_upgrade_cost": 80
+      "base_upgrade_cost": 80,
+      "art": "res://assets/sprites/generators/editor_studio.svg"
     },
     {
       "id": "web_scaffold",
@@ -31,7 +33,8 @@
       "unlock_cost": 150,
       "max_energy": 6,
       "regen_seconds": 4.5,
-      "base_upgrade_cost": 120
+      "base_upgrade_cost": 120,
+      "art": "res://assets/sprites/generators/web_scaffold.svg"
     },
     {
       "id": "toolbox",
@@ -42,7 +45,8 @@
       "unlock_cost": 300,
       "max_energy": 6,
       "regen_seconds": 4.5,
-      "base_upgrade_cost": 160
+      "base_upgrade_cost": 160,
+      "art": "res://assets/sprites/generators/toolbox.svg"
     },
     {
       "id": "data_sprout",
@@ -53,7 +57,8 @@
       "unlock_cost": 600,
       "max_energy": 6,
       "regen_seconds": 5.0,
-      "base_upgrade_cost": 220
+      "base_upgrade_cost": 220,
+      "art": "res://assets/sprites/generators/data_sprout.svg"
     },
     {
       "id": "package_box",
@@ -64,7 +69,8 @@
       "unlock_cost": 1200,
       "max_energy": 6,
       "regen_seconds": 5.0,
-      "base_upgrade_cost": 300
+      "base_upgrade_cost": 300,
+      "art": "res://assets/sprites/generators/package_box.svg"
     },
     {
       "id": "game_lab",
@@ -75,7 +81,8 @@
       "unlock_cost": 2500,
       "max_energy": 6,
       "regen_seconds": 5.5,
-      "base_upgrade_cost": 420
+      "base_upgrade_cost": 420,
+      "art": "res://assets/sprites/generators/game_lab.svg"
     },
     {
       "id": "hardware_bench",
@@ -86,7 +93,8 @@
       "unlock_cost": 5000,
       "max_energy": 6,
       "regen_seconds": 5.5,
-      "base_upgrade_cost": 560
+      "base_upgrade_cost": 560,
+      "art": "res://assets/sprites/generators/hardware_bench.svg"
     }
   ]
 }

@@ -196,7 +196,7 @@ func make_order() -> Dictionary:
 		"customer_role": str(customer.get("role", "Client")), "customer_color": str(customer.get("color", "4A90D9")),
 		"customer_initials": str(customer.get("initials", "?")),
 		"requirements": requirements, "reward_coins": reward_coins, "reward_xp": reward_xp,
-		"difficulty": req_count,
+		"difficulty": req_count, "fulfilled": {},
 	}
 
 func replace_order(index: int) -> void:

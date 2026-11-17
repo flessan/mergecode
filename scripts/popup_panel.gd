@@ -46,7 +46,26 @@ func _clear() -> void:
 func open(title: String) -> void:
 	_title.text = title
 	_clear()
+	# Size to the actual viewport so the modal never overflows small screens.
+	var vp := get_viewport_rect().size
+	var w: float = clampf(vp.x * 0.94, 300.0, 720.0)
+	var h: float = clampf(vp.y * 0.88, 300.0, 580.0)
+	offset_left = -w * 0.5
+	offset_right = w * 0.5
+	offset_top = -h * 0.5
+	offset_bottom = h * 0.5
+	_scroll.custom_minimum_size = Vector2(w - 48.0, h - 110.0)
 	visible = true
+
+## Coloured tile with the item's white silhouette icon, used in lists.
+func _item_icon(item_id: String, px: int = 46) -> PanelContainer:
+	var def := ItemDatabase.instance.get_item(item_id)
+	var p := PanelContainer.new()
+	p.custom_minimum_size = Vector2(px, px)
+	p.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex(str(def.get("color", "999999"))), 10))
+	p.tooltip_text = ItemDatabase.instance.item_name(item_id)
+	p.add_child(UiStyle.icon_rect(str(def.get("icon", "")), Vector2(px - 12, px - 12), Color.WHITE))
+	return p
 
 # --- Crafting ---------------------------------------------------------------
 
@@ -186,7 +205,9 @@ func show_shop() -> void:
 			var row := PanelContainer.new()
 			row.add_theme_stylebox_override("panel", UiStyle.panel_style(UiStyle.hex("FFF1DE"), 12))
 			var hbox := HBoxContainer.new()
+			hbox.add_theme_constant_override("separation", 10)
 			row.add_child(hbox)
+			hbox.add_child(_item_icon(item_id, 46))
 			var text := VBoxContainer.new()
 			text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			hbox.add_child(text)
@@ -213,10 +234,10 @@ func _on_buy(item_id: String, price: int) -> void:
 func show_help() -> void:
 	open("How to Play")
 	var lines := [
-		"1. Tap a generator on the left to produce items. Generators use energy, which refills over time.",
+		"1. Tap Make on a generator machine to produce items. Generators use energy, which refills over time.",
 		"2. Drag an item onto another identical item to merge them into the next tier.",
 		"3. Drag items onto empty cells to move them, or onto different items to swap.",
-		"4. Watch the customer orders on the right — deliver the requested items for coins and XP.",
+		"4. Customers wait at the top — drag requested items onto a customer to hand them over, or press Deliver.",
 		"5. Spend coins on generator upgrades, new generators, board expansion and the shop.",
 		"6. Combine different items in Crafting to create software products, and complete Missions for bonuses.",
 		"7. Click any board item to see its details and sell it. Your game saves automatically.",

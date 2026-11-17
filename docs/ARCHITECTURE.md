@@ -15,7 +15,8 @@ Modular but deliberately small. Scenes are thin shells (`scenes/main_menu.tscn`,
 - `scripts/generator_card.gd` — produce (energy), unlock, upgrade UI; energy regen is ticked from `main.gd._process`.
 - `scripts/order_card.gd` — requirement checklist vs live board counts, deliver/dismiss.
 - `scripts/popup_panel.gd` — Crafting, Catalog, Missions, Shop, Help modals; every button acts on `Board`/`GameState` directly.
-- `scripts/main.gd` — HUD, layout, selection/sell panel, toasts, autosave (10 s, dirty-flagged), level-up handling.
+- `scripts/main.gd` — board-first adaptive layout (HUD, customer strip, generator dock that re-parents between side/bottom on resize, bottom nav), selection/sell bar, toasts, autosave (10 s, dirty-flagged), level-up handling.
+- Artwork: `assets/sprites/game_icons/` (Game-Icons CC BY 3.0 silhouettes, background square stripped, referenced per-item via the `icon` field in `data/items.json`), original SVG customers/generators/backgrounds from `tools/generate_artwork.py`; see `assets/ASSET_CREDITS.md`.
 - `scripts/ui_style.gd` — shared rounded styles/colours (no neon/cyberpunk palette).
 
 Gameplay code accesses the autoloads through their class-name static instances (`ItemDatabase.instance`, `GameStateStore.instance`, `SaveGame.instance`, `SoundFx.instance`, assigned in `_enter_tree`) rather than the autoload singleton names. This keeps script parsing independent of the editor's autoload-registration timing (e.g. after pulling new files into an already-open editor). Note the game popup class is `MergePopupPanel` because `PopupPanel` is a native Godot class.

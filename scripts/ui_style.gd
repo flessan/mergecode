@@ -57,6 +57,29 @@ static func label(text: String, size: int = 15, color: Color = INK, bold: bool =
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
+static func load_tex(path: String) -> Texture2D:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D
+
+static func icon_rect(path: String, min_size: Vector2, tint: Color = Color.WHITE) -> TextureRect:
+	var t := TextureRect.new()
+	t.texture = load_tex(path)
+	t.custom_minimum_size = min_size
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	t.modulate = tint
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return t
+
+## Button with a leading icon (TextureButton can't show text, so this is a
+## regular Button using its built-in icon support).
+static func make_icon_button(icon_path: String, text: String, bg: Color = ACCENT, font_size: int = 14) -> Button:
+	var b := make_button(text, bg, font_size)
+	b.icon = load_tex(icon_path)
+	b.expand_icon = false
+	return b
+
 static func chip(text: String, bg: Color) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", panel_style(bg, 9, Color(0, 0, 0, 0.04)))

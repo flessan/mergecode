@@ -29,9 +29,16 @@ func _build_cells() -> void:
 		add_child(cell)
 		_cells.append(cell)
 
+func visible_rows() -> int:
+	return int(ceil(float(GameStateStore.instance.board_cells_unlocked) / float(COLUMNS)))
+
 func refresh_locks() -> void:
+	var shown := visible_rows() * COLUMNS
 	for i in _cells.size():
 		_cells[i].set_locked(i >= GameStateStore.instance.board_cells_unlocked)
+		# Fully locked rows stay hidden until expansion reveals them, so the
+		# board always fits its surface without shrinking cells to nothing.
+		_cells[i].visible = i < shown
 
 # --- Queries ---------------------------------------------------------------
 
@@ -106,6 +113,7 @@ func _spawn_tile(cell: int, animate: bool) -> void:
 		tile.pop_animation()
 
 func _on_tile_clicked(tile: ItemTile) -> void:
+	set_selected_cell(tile.cell_index)
 	item_selected.emit(tile)
 
 func clear_highlights() -> void:

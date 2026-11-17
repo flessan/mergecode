@@ -9,9 +9,9 @@ var _help: MergePopupPanel
 func _ready() -> void:
 	GameBootstrap.ensure_managers(self)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = UiStyle.BG
+	var bg := UiStyle.icon_rect("res://assets/backgrounds/workshop.svg", Vector2.ZERO, Color.WHITE)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	add_child(bg)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
