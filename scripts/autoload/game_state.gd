@@ -160,7 +160,7 @@ func generator_bonus_chance(gen_id: String) -> float:
 # --- Board expansion ---------------------------------------------------------
 
 func board_expansion_cost() -> int:
-	var expansions := (board_cells_unlocked - BOARD_START_CELLS) / 7
+	var expansions := int(float(board_cells_unlocked - BOARD_START_CELLS) / 7.0)
 	return 250 * (expansions + 1) * (expansions + 1)
 
 # --- Orders ------------------------------------------------------------------

@@ -7,7 +7,7 @@ var _new_btn: Button
 var _help: MergePopupPanel
 
 func _ready() -> void:
-	GameBootstrap.ensure_managers(get_tree())
+	GameBootstrap.ensure_managers(self)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = UiStyle.BG
